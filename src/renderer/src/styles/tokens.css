@@ -1,0 +1,88 @@
+/* Lumen design tokens — one place for colour, glass, type, radius and motion. */
+
+:root {
+  interpolate-size: allow-keywords;
+
+  --font-sans: 'Inter Variable', Inter, 'Cantarell', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+
+  --accent: #7c6cff;
+  --glass-alpha: 0.8;
+
+  --panel-width: 760px;
+  --radius-panel: 24px;
+  --radius-lg: 16px;
+  --radius-row: 12px;
+  --radius-sm: 8px;
+  --radius-pill: 999px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-spring: cubic-bezier(0.34, 1.42, 0.64, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 260ms;
+
+  --accent-soft: color-mix(in oklab, var(--accent) 22%, transparent);
+  --accent-strong: color-mix(in oklab, var(--accent) 85%, white 15%);
+}
+
+/* ── Dark glass (default) ────────────────────────────────────────────────── */
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+  --glass-tint: 18 18 26;
+  --glass-bg: rgb(var(--glass-tint) / var(--glass-alpha));
+  --glass-border: rgb(255 255 255 / 0.11);
+  --glass-edge: rgb(255 255 255 / 0.16);
+  --glass-sheen: rgb(255 255 255 / 0.07);
+  --surface-1: rgb(255 255 255 / 0.045);
+  --surface-2: rgb(255 255 255 / 0.075);
+  --surface-3: rgb(255 255 255 / 0.11);
+  --text: rgb(255 255 255 / 0.95);
+  --text-2: rgb(235 235 245 / 0.62);
+  --text-3: rgb(235 235 245 / 0.38);
+  --divider: rgb(255 255 255 / 0.07);
+  --row-selected: color-mix(in oklab, var(--accent) 30%, rgb(255 255 255 / 0.04));
+  --row-selected-edge: color-mix(in oklab, var(--accent) 55%, rgb(255 255 255 / 0.2));
+  --kbd-bg: rgb(255 255 255 / 0.08);
+  --kbd-edge: rgb(255 255 255 / 0.12);
+  --shadow-panel: 0 40px 100px -24px rgb(0 0 0 / 0.7), 0 16px 40px -16px rgb(0 0 0 / 0.55), 0 0 0 0.5px rgb(0 0 0 / 0.6);
+  --danger: #ff6b7a;
+  --success: #4ade80;
+  --noise-opacity: 0.05;
+  --backdrop: rgb(0 0 0 / 0.28);
+}
+
+/* ── Light glass ─────────────────────────────────────────────────────────── */
+[data-theme='light'] {
+  color-scheme: light;
+  --glass-tint: 248 248 252;
+  --glass-border: rgb(0 0 0 / 0.08);
+  --glass-edge: rgb(255 255 255 / 0.9);
+  --glass-sheen: rgb(255 255 255 / 0.5);
+  --surface-1: rgb(0 0 0 / 0.035);
+  --surface-2: rgb(0 0 0 / 0.055);
+  --surface-3: rgb(0 0 0 / 0.08);
+  --text: rgb(18 18 28 / 0.94);
+  --text-2: rgb(40 40 60 / 0.62);
+  --text-3: rgb(40 40 60 / 0.42);
+  --divider: rgb(0 0 0 / 0.07);
+  --row-selected: color-mix(in oklab, var(--accent) 18%, rgb(255 255 255 / 0.5));
+  --row-selected-edge: color-mix(in oklab, var(--accent) 40%, transparent);
+  --kbd-bg: rgb(0 0 0 / 0.05);
+  --kbd-edge: rgb(0 0 0 / 0.1);
+  --shadow-panel: 0 40px 90px -24px rgb(30 30 60 / 0.35), 0 14px 36px -16px rgb(30 30 60 / 0.3), 0 0 0 0.5px rgb(0 0 0 / 0.12);
+  --danger: #e5484d;
+  --success: #16a34a;
+  --noise-opacity: 0.035;
+  --backdrop: rgb(20 20 40 / 0.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+  }
+}

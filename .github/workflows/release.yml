@@ -1,0 +1,65 @@
+name: Release
+
+# Builds the Linux packages when a GitHub release is published (not on every push),
+# then attaches them to that release.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to (re)build, e.g. v0.2.0
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  linux:
+    name: AppImage + .deb
+    runs-on: ubuntu-24.04
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Use the release tag as the app version
+        run: |
+          VERSION="${TAG#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Release tag '$TAG' must look like v1.2.3"
+            exit 1
+          fi
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Package AppImage and .deb
+        run: npx electron-builder --linux AppImage deb --publish never
+
+      - name: Checksums
+        working-directory: release
+        run: sha256sum *.AppImage *.deb | tee SHA256SUMS.txt
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" release/*.AppImage release/*.deb release/SHA256SUMS.txt --clobber

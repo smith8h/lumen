@@ -1,0 +1,67 @@
+# Packaging for Linux: AppImage (portable) and .deb (Debian/Ubuntu).
+appId: io.github.lumenlauncher.Lumen
+productName: Lumen
+executableName: lumen
+copyright: Copyright © 2026 Hussein Shakir
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - out/**
+  - package.json
+  - "!**/*.map"
+
+extraResources:
+  - from: resources/icon.png
+    to: icon.png
+
+# Replaces the Electron binary with a small launcher script (see build/linux/lumen-launcher.sh).
+afterPack: build/afterPack.cjs
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Utility
+  icon: build/icons
+  synopsis: Spotlight-style launcher for Linux
+  description: Search apps, files and the web; run commands and calculations
+  maintainer: Hussein Shakir <husseinshakir81@gmail.com>
+  vendor: Hussein Shakir
+  executableName: lumen
+  syncDesktopName: true
+  desktop:
+    entry:
+      Name: Lumen
+      GenericName: Launcher
+      Comment: Search apps, files and the web; run commands and calculations
+      Keywords: launcher;spotlight;search;run;calculator;
+      StartupWMClass: lumen
+
+# Static AppImage runtime: runs on distros without libfuse2 (Ubuntu 22.04+, Fedora, …).
+toolsets:
+  appimage: "1.0.3"
+
+appImage:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+deb:
+  artifactName: ${name}_${version}_${arch}.${ext}
+  # Our own profile so it applies to the real Electron binary behind the launcher script.
+  appArmorProfile: build/linux/apparmor-profile.tpl
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libuuid1
+    - libsecret-1-0
+  recommends:
+    - libglib2.0-bin
+
+publish: null
