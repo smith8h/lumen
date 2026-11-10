@@ -36,9 +36,11 @@ interface Props {
   onChange(patch: Partial<Settings>): void
   onBack(): void
   onShortcut(): void
+  /** The GNOME extension is blurring the background for real. */
+  shellBlur?: boolean
 }
 
-export function SettingsView({ settings: s, onChange, onBack, onShortcut }: Props) {
+export function SettingsView({ settings: s, onChange, onBack, onShortcut, shellBlur }: Props) {
   const [info, setInfo] = useState<AppInfo | null>(null)
   const [shortcut, setShortcut] = useState<ShortcutStatus | null>(null)
   const [newRoot, setNewRoot] = useState('')
@@ -89,7 +91,10 @@ export function SettingsView({ settings: s, onChange, onBack, onShortcut }: Prop
                 ))}
               </div>
             </Field>
-            <Field title="Glass opacity" hint="Lower is more see-through.">
+            <Field
+              title="Glass opacity"
+              hint={shellBlur ? 'Lower is more see-through. Real blur is on (Lumen GNOME extension).' : 'Lower is more see-through.'}
+            >
               <input
                 type="range"
                 min={0.3}
@@ -189,6 +194,9 @@ export function SettingsView({ settings: s, onChange, onBack, onShortcut }: Prop
             </Field>
             <Field title="Launch at login" hint="Start quietly in the background so Alt+Space is instant.">
               <Toggle label="Launch at login" on={s.launchAtLogin} onChange={(v) => onChange({ launchAtLogin: v })} />
+            </Field>
+            <Field title="Free memory when idle" hint="After a minute hidden, Lumen unloads its window to save memory. Opening it again takes about 0.1s longer.">
+              <Toggle label="Free memory when idle" on={s.freeMemoryWhenIdle} onChange={(v) => onChange({ freeMemoryWhenIdle: v })} />
             </Field>
             <Field title="Terminal" hint="Used for “Run in terminal” and terminal apps.">
               <select className="select" value={s.terminal} onChange={(e) => onChange({ terminal: e.target.value })}>

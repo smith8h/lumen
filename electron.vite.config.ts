@@ -23,6 +23,8 @@ export default defineConfig({
   },
   renderer: {
     resolve: { alias: shared },
-    plugins: [react()]
+    plugins: [react()],
+    // Smaller bundle = less to parse and keep in memory, and a faster cold start.
+    build: { minify: true, reportCompressedSize: false }
   }
 })

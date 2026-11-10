@@ -156,6 +156,8 @@ export interface Settings {
   dimBackground: boolean
   showPreview: boolean
   currencyConversion: boolean
+  /** Unload the panel's page after it has been hidden for a while. */
+  freeMemoryWhenIdle: boolean
   firstRunDone: boolean
 }
 
@@ -178,6 +180,15 @@ export interface AppInfo {
   home: string
 }
 
+/** The panel's rectangle inside Lumen's window, in CSS pixels. */
+export interface PanelRect {
+  x: number
+  y: number
+  width: number
+  height: number
+  radius: number
+}
+
 export interface LumenApi {
   search(query: string, seq: number): Promise<SearchResponse>
   suggestions(): Promise<ResultSection[]>
@@ -185,6 +196,8 @@ export interface LumenApi {
   preview(item: Pick<ResultItem, 'id' | 'kind' | 'action' | 'title' | 'subtitle'>): Promise<Preview>
   killCommand(runId: string): Promise<void>
   hide(): void
+  /** Tell the main process the page is ready to be shown. */
+  ready(): void
   getSettings(): Promise<Settings>
   setSettings(patch: Partial<Settings>): Promise<Settings>
   shortcutStatus(): Promise<ShortcutStatus>
@@ -195,4 +208,9 @@ export interface LumenApi {
   onHide(cb: () => void): () => void
   onCommandOutput(cb: (e: CommandOutputEvent) => void): () => void
   onSettings(cb: (s: Settings) => void): () => void
+  /** Tell the main process where the panel is (null when closed), for the GNOME extension's blur. */
+  reportPanel(rect: PanelRect | null): void
+  /** Whether the GNOME extension is drawing real blur behind the panel. */
+  shellBlur(): Promise<boolean>
+  onShellBlur(cb: (enabled: boolean) => void): () => void
 }

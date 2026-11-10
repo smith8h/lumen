@@ -138,6 +138,11 @@ export function allowServe(path: string): string {
 
 export const canServe = (path: string): boolean => servable.has(path)
 
+/** The per-theme tables are only needed while resolving; drop them to save memory. */
+export function releaseThemeIndexes(): void {
+  themeIndexes.clear()
+}
+
 export function resetIconCache(): void {
   themeChain = null
   themeIndexes.clear()

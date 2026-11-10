@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import type { Preview, ResultItem } from '@shared/types'
 import { cleanEnv, desktopName, spawnDetached, which } from '../env'
 import { matchFields } from '../fuzzy'
-import { allowServe, resolveIcon } from '../icons'
+import { allowServe, releaseThemeIndexes, resolveIcon } from '../icons'
 import { frecency } from '../store'
 import { dataDirs, localeKeys } from '../xdg'
 import { openInTerminal } from './terminal'
@@ -147,6 +147,7 @@ function scan(): void {
   }
   for (const d of dataDirs()) walk(join(d, 'applications'), '')
   apps = found
+  releaseThemeIndexes()
 }
 
 export function initApps(): void {

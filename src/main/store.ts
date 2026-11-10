@@ -42,6 +42,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dimBackground: false,
   showPreview: true,
   currencyConversion: true,
+  freeMemoryWhenIdle: true,
   firstRunDone: false
 }
 
