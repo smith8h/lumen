@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="64" y1="40" x2="460" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#a596ff"/>
+      <stop offset="0.5" stop-color="#6c5cff"/>
+      <stop offset="1" stop-color="#ff6fb5"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0" cy="0" r="1" gradientTransform="translate(170 120) rotate(52) scale(330)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#2a1a7a" flood-opacity="0.45"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <rect x="40" y="36" width="432" height="432" rx="118" fill="url(#bg)"/>
+    <rect x="40" y="36" width="432" height="432" rx="118" fill="url(#sheen)"/>
+    <rect x="43" y="39" width="426" height="426" rx="115" fill="none" stroke="#fff" stroke-opacity="0.38" stroke-width="5"/>
+  </g>
+  <g filter="url(#glow)">
+    <path d="M256 118c11 72 61 122 133 134-72 11-122 61-133 133-11-72-61-122-133-133 72-12 122-62 133-134Z" fill="#fff"/>
+    <circle cx="360" cy="146" r="20" fill="#fff" fill-opacity="0.9"/>
+  </g>
+</svg>
