@@ -48,13 +48,14 @@ select {
 /* ── Panel ─────────────────────────────────────────────────────────────── */
 .panel {
   position: absolute;
-  left: 50%;
+  /* Centered without a transform, so offsetLeft/offsetTop are the real position (see usePanelGeometry). */
+  left: 0;
+  right: 0;
+  margin-inline: auto;
   top: max(48px, 20vh);
   width: min(var(--panel-width), calc(100vw - 32px));
-  translate: -50% 0;
   border-radius: var(--radius-panel);
   background: var(--glass-bg);
-  backdrop-filter: blur(40px) saturate(180%);
   box-shadow:
     var(--shadow-panel),
     inset 0 1px 0 var(--glass-edge),

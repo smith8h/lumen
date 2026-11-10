@@ -28,6 +28,7 @@ Press <kbd>Alt</kbd> + <kbd>Space</kbd> to find apps, files and folders, run ter
 - **System.** Lock, sleep, log out, restart, shut down, dark/light mode, Wi-Fi, Do Not Disturb, empty Trash. Destructive actions ask for a second Enter.
 - **Learns from you.** Frecency ranking puts what you open most at the top, and the start screen shows your favourite apps and recent files.
 - **Feels native.** Glass design with a light/dark theme, accent colours, smooth spring animations, a sliding selection, full keyboard control and an actions menu (Ctrl+K).
+- **Real glass on GNOME.** An optional GNOME Shell extension blurs whatever is behind the panel, like macOS, and keeps Lumen out of the dock and Alt+Tab.
 - **Instant toggle.** The shortcut talks to the running app over D-Bus, so the panel appears in about 5 ms.
 
 ## Screenshots
@@ -73,6 +74,36 @@ lumen --remove-shortcut    # restores GNOME's original Alt+Space
 
 On **other desktops** (KDE Plasma, Cinnamon, Xfce, Hyprland, Sway…), Lumen tries a regular global shortcut first. If your desktop doesn't allow that, bind <kbd>Alt</kbd>+<kbd>Space</kbd> to `lumen --toggle` in its keyboard settings. The welcome screen shows the exact command.
 
+### GNOME extension for real blur (optional)
+
+GNOME doesn't let regular apps blur what's behind their windows, so on its own Lumen's glass is a frosted tint. The **Lumen Glass** GNOME Shell extension adds the rest from inside the compositor:
+
+- **Real background blur** under the panel, clipped to its rounded corners and following its size as results change. Lumen notices the extension and makes its own tint more see-through.
+- **No dock or Alt+Tab entry** while the panel is open.
+- **Reliable focus**, so you can type the moment the panel appears.
+
+| Without the extension | With the extension |
+|:-:|:-:|
+| <img src="docs/screenshots/glass-off.png" alt="Lumen's panel with a frosted tint; the wallpaper behind it is still sharp" /> | <img src="docs/screenshots/glass-on.png" alt="Lumen's panel with the wallpaper behind it blurred" /> |
+
+<sub>Wallpaper: *Red Acer* by mendhak, from Ubuntu's wallpaper set.</sub>
+
+It needs GNOME Shell 50. Lumen works the same without it.
+
+1. Download `lumen@lumenlauncher.github.io.shell-extension.zip` from [Releases](https://github.com/YOUR_USERNAME/lumen/releases/latest), or build it with `npm run extension:pack`.
+2. Install it:
+   ```bash
+   gnome-extensions install --force lumen@lumenlauncher.github.io.shell-extension.zip
+   ```
+3. **Log out and back in.** On Wayland, GNOME only loads new extensions at login.
+4. Turn it on:
+   ```bash
+   gnome-extensions enable lumen@lumenlauncher.github.io
+   ```
+   or use the *Extensions* app.
+
+To remove it: `gnome-extensions uninstall lumen@lumenlauncher.github.io`.
+
 ## Using Lumen
 
 | Keys | What it does |
@@ -116,9 +147,11 @@ A few details worth knowing:
 
 - **Wayland first.** Wayland doesn't let apps place their own windows or grab global keys. Lumen opens a transparent window over the screen and draws the panel at Spotlight's position itself, so placement is the same on every compositor. A click on the transparent area, or focus moving elsewhere, closes it.
 - **The shortcut is instant.** GNOME runs `gdbus call` straight into the running process instead of starting a second Electron instance, which takes about 5 ms instead of about 300 ms.
+- **Real blur from the compositor.** The renderer watches the panel with a `ResizeObserver` and the main process broadcasts its rectangle as the D-Bus signal `PanelGeometry(x, y, w, h, radius)`. The GNOME extension finds Lumen's window by the PID that owns the bus name and puts an actor under it. That actor copies the pixels behind the panel, blurs them on the GPU (Clutter paint nodes: blit, downscale, gaussian) and draws them through a small GLSL shader that clips to the rounded rectangle and adds saturation. GNOME's stock `Shell.BlurEffect` can only blur a plain rectangle. The extension sets Lumen's `ShellBlur` D-Bus property so the panel can lower its own tint.
 - **Security.** The renderer is sandboxed with context isolation and no Node access. Every IPC call is checked against the panel's own `webContents`, settings are validated against a schema, mathjs runs with `import`/`evaluate`/`createUnit` disabled, and icons go through a custom protocol that serves only files Lumen resolved itself.
 - **Clean child processes.** Apps start fully detached through `gio launch` (so D-Bus activation and startup notification work). Lumen first removes the environment variables Electron and the AppImage runtime inject, so launched apps behave as if started from the desktop.
 - **Packaging.** A small launcher script handles the fast `--toggle` path. The .deb ships an AppArmor profile so Chromium's sandbox works on Ubuntu 24.04+, and the AppImage uses the static runtime, so it doesn't need `libfuse2`.
+- **Light on memory.** After a minute hidden, Lumen unloads its window and keeps only a small background process. Rebuilding the window takes about 50 ms, so the next Alt+Space still feels instant. Chromium's network service runs inside the main process, V8's young generation is kept small, mathjs loads on the first calculation, and the AppImage skips the zygote helpers it doesn't need without a sandbox. Turn unloading off in Settings if you'd rather keep everything warm.
 
 ## Development
 
@@ -130,7 +163,13 @@ npm run dev          # hot-reloading dev build
 npm run typecheck
 npm run dist         # release/Lumen-x.y.z-x86_64.AppImage and release/lumen_x.y.z_amd64.deb
 npm run icons        # re-render build/icons from resources/icon.svg
+
+npm run extension:pack     # release/lumen@lumenlauncher.github.io.shell-extension.zip (extensions.gnome.org-ready)
+npm run extension:install  # pack + install for your user (log out and back in to load it)
+npm run extension:nested   # nested GNOME Shell with the extension, running Lumen inside it
 ```
+
+**Working on the extension without logging out.** `npm run extension:nested` starts a nested GNOME Shell in a window (`gnome-shell --devkit`, which needs `mutter-dev-bin` on Ubuntu) with only the Lumen extension enabled, then runs the dev build of Lumen inside it. It uses its own D-Bus session, settings and Lumen profile, so your real session is untouched. Add `-- --headless` to run it without a window (for scripts and screenshots over D-Bus). GNOME Shell can't reload extension code, so restart it after changing `gnome-extension/`.
 
 Environment switches for testing:
 
@@ -153,6 +192,7 @@ src/
   preload/         typed bridge exposed as window.lumen
   renderer/        React UI and glass design tokens
   shared/          types and constants shared by all three
+gnome-extension/   optional GNOME Shell extension: real blur, dock/Alt+Tab hiding, focus
 build/             icons, launcher script, AppArmor profile, packaging hooks
 ```
 
@@ -164,19 +204,18 @@ Releases are built by GitHub Actions only when you **publish a GitHub release**,
 
 1. Push your changes to `main`.
 2. On GitHub, go to **Releases → Draft a new release**, create a tag like `v0.2.0`, and publish it.
-3. The [Release workflow](.github/workflows/release.yml) sets the app version from the tag, type-checks, builds, and attaches the `.AppImage`, the `.deb` and `SHA256SUMS.txt` to that release.
+3. The [Release workflow](.github/workflows/release.yml) sets the app version from the tag, type-checks, builds, and attaches the `.AppImage`, the `.deb`, the GNOME extension zip and `SHA256SUMS.txt` to that release.
 
 To rebuild an existing release, run the workflow by hand from the **Actions** tab and enter the tag.
 
 ## Known limitations
 
-- GNOME doesn't give apps real background blur, so the glass is a frosted tint. Lower *Glass opacity* in Settings for a more see-through look.
-- On Wayland, Lumen's window shows up in the dock and Alt+Tab while the panel is open.
+- GNOME doesn't give apps real background blur, so without the [GNOME extension](#gnome-extension-for-real-blur-optional) the glass is a frosted tint. Lower *Glass opacity* in Settings for a more see-through look. Other desktops get the tint only.
+- On Wayland without the extension, Lumen's window shows up in the dock and Alt+Tab while the panel is open.
 - Automatic shortcut setup covers GNOME. Other desktops may need the one-time manual binding above.
 
 ## Roadmap
 
-- GNOME Shell companion extension for real blur behind the panel
 - Clipboard history and emoji picker
 - Plugin API for custom providers
 - Flatpak and AUR packages

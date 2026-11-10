@@ -14,6 +14,7 @@ const api: LumenApi = {
   preview: (item) => ipcRenderer.invoke('preview', { id: item.id, kind: item.kind, action: item.action, title: item.title, subtitle: item.subtitle }),
   killCommand: (runId) => ipcRenderer.invoke('kill', runId),
   hide: () => ipcRenderer.send('hide'),
+  ready: () => ipcRenderer.send('renderer:ready'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
   shortcutStatus: () => ipcRenderer.invoke('shortcut:status'),
@@ -23,7 +24,10 @@ const api: LumenApi = {
   onShow: (cb) => on('lumen:show', cb),
   onHide: (cb) => on('lumen:hide', () => cb()),
   onCommandOutput: (cb) => on('lumen:command-output', cb),
-  onSettings: (cb) => on('lumen:settings', cb)
+  onSettings: (cb) => on('lumen:settings', cb),
+  reportPanel: (rect) => ipcRenderer.send('panel:geometry', rect),
+  shellBlur: () => ipcRenderer.invoke('shell-blur:get'),
+  onShellBlur: (cb) => on('lumen:shell-blur', cb)
 }
 
 contextBridge.exposeInMainWorld('lumen', api)

@@ -2,10 +2,10 @@ import { app, ipcMain, net, protocol, type IpcMainInvokeEvent } from 'electron'
 import { writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { pathToFileURL } from 'node:url'
-import type { AppInfo, ResultItem, Settings } from '@shared/types'
+import type { AppInfo, PanelRect, ResultItem, Settings } from '@shared/types'
 import { APP_NAME } from '@shared/constants'
 import { execute, killCommand, preview } from './actions'
-import { startDbus } from './dbus'
+import { emitPanelGeometry, startDbus } from './dbus'
 import { desktopName, isGnome } from './env'
 import { fileCount, initFiles, reindex } from './files'
 import { canServe } from './icons'
@@ -15,7 +15,7 @@ import { warmCalculator } from './providers/calculator'
 import { search, suggestions } from './search'
 import { refreshShortcutCommand, registerFallbackShortcut, removeShortcut, setupShortcut, shortcutStatus } from './shortcut'
 import { DEFAULT_SETTINGS, getSettings, loadHistory, loadSettings, onSettingsChange, updateSettings } from './store'
-import { createPanel, hidePanel, panel, setQuitting, showPanel, togglePanel } from './window'
+import { createPanel, hidePanel, panel, panelReady, setQuitting, setUnloadAfter, showPanel, togglePanel } from './window'
 
 // ── Before ready ───────────────────────────────────────────────────────────
 app.setName(APP_NAME)
@@ -23,13 +23,16 @@ app.setName(APP_NAME)
 if (process.env.LUMEN_USER_DATA) app.setPath('userData', process.env.LUMEN_USER_DATA)
 app.commandLine.appendSwitch('ozone-platform-hint', 'auto')
 if (process.env.LUMEN_X11) app.commandLine.appendSwitch('ozone-platform', 'x11')
-if (!isGnome()) app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal')
+// Run Chromium's network service inside the main process: one process fewer (~20 MB).
+app.commandLine.appendSwitch('enable-features', ['NetworkServiceInProcess2', ...(isGnome() ? [] : ['GlobalShortcutsPortal'])].join(','))
 // Wayland app id / WM class, so docks match the window to lumen.desktop.
 ;(app as unknown as { setDesktopName?: (n: string) => void }).setDesktopName?.('lumen.desktop')
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'lumen-icon', privileges: { standard: true, secure: true, supportFetchAPI: true } }])
 
 const startHidden = process.argv.includes('--hidden')
+/** Hidden this long, the panel's page is unloaded; the next Alt+Space rebuilds it. */
+const UNLOAD_AFTER_MS = Number(process.env.LUMEN_UNLOAD_MS) || 60_000
 
 /** Command-line maintenance flags. Returns true when the flag means "don't show the panel". */
 function handleCliFlags(argv: string[]): boolean {
@@ -68,6 +71,18 @@ app.on('window-all-closed', () => {
 app.on('before-quit', setQuitting)
 
 // ── IPC ────────────────────────────────────────────────────────────────────
+/** True while the GNOME extension draws real blur behind the panel. */
+let shellBlur = false
+
+function toPanelRect(v: unknown): PanelRect | null {
+  if (!v || typeof v !== 'object') return null
+  const r = v as Record<string, unknown>
+  const num = (k: string) => (typeof r[k] === 'number' && Number.isFinite(r[k]) ? Math.round(Math.min(1e5, Math.max(-1e5, r[k] as number))) : NaN)
+  const rect = { x: num('x'), y: num('y'), width: num('width'), height: num('height'), radius: num('radius') }
+  if (Object.values(rect).some(Number.isNaN) || rect.width <= 0 || rect.height <= 0) return null
+  return rect
+}
+
 function fromPanel(e: IpcMainInvokeEvent): boolean {
   return e.sender === panel()?.webContents
 }
@@ -117,6 +132,11 @@ function registerIpc(): void {
       home: homedir()
     })
   )
+  handle('shell-blur:get', () => shellBlur)
+  ipcMain.on('panel:geometry', (e, rect: unknown) => {
+    if (e.sender === panel()?.webContents) emitPanelGeometry(toPanelRect(rect))
+  })
+  ipcMain.on('renderer:ready', (e) => panelReady(e.sender))
   ipcMain.on('hide', (e) => {
     if (e.sender === panel()?.webContents) hidePanel(true)
   })
@@ -140,7 +160,9 @@ app.whenReady().then(async () => {
 
   let lastFileSettings = JSON.stringify([getSettings().fileRoots, getSettings().excludeDirs, getSettings().includeHidden, getSettings().fileSearch])
   let lastAutostart = getSettings().launchAtLogin
+  const applyUnload = () => setUnloadAfter(getSettings().freeMemoryWhenIdle ? UNLOAD_AFTER_MS : null)
   onSettingsChange((s) => {
+    applyUnload()
     panel()?.webContents.send('lumen:settings', s)
     const fileSettings = JSON.stringify([s.fileRoots, s.excludeDirs, s.includeHidden, s.fileSearch])
     if (fileSettings !== lastFileSettings) {
@@ -154,10 +176,15 @@ app.whenReady().then(async () => {
   })
 
   createPanel(iconFile())
+  applyUnload()
   await startDbus({
     toggle: () => togglePanel(),
     show: (query) => showPanel({ query }),
     hide: () => hidePanel(true),
+    shellBlurChanged: (enabled) => {
+      shellBlur = enabled
+      panel()?.webContents.send('lumen:shell-blur', enabled)
+    },
     capture: app.isPackaged
       ? undefined
       : async (path) => {

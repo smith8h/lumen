@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   linux:
-    name: AppImage + .deb
+    name: AppImage + .deb + GNOME extension
     runs-on: ubuntu-24.04
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
@@ -55,11 +55,14 @@ jobs:
       - name: Package AppImage and .deb
         run: npx electron-builder --linux AppImage deb --publish never
 
+      - name: Pack the GNOME Shell extension
+        run: npm run extension:pack
+
       - name: Checksums
         working-directory: release
-        run: sha256sum *.AppImage *.deb | tee SHA256SUMS.txt
+        run: sha256sum *.AppImage *.deb *.shell-extension.zip | tee SHA256SUMS.txt
 
       - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" release/*.AppImage release/*.deb release/SHA256SUMS.txt --clobber
+        run: gh release upload "$TAG" release/*.AppImage release/*.deb release/*.shell-extension.zip release/SHA256SUMS.txt --clobber

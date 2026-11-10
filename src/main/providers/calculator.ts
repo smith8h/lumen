@@ -3,7 +3,7 @@
 import { app } from 'electron'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { all, create, type MathJsInstance } from 'mathjs'
+import type { MathJsInstance } from 'mathjs'
 import type { ResultItem } from '@shared/types'
 import { getSettings } from '../store'
 
@@ -12,6 +12,9 @@ let limitedEvaluate: ((expr: string) => unknown) | null = null
 
 function getMath(): MathJsInstance {
   if (math) return math
+  // Loaded on the first calculation, not at startup: mathjs is large (~10 MB of heap).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { all, create } = require('mathjs') as typeof import('mathjs')
   math = create(all, { number: 'number', precision: 64 })
   // Keep a reference first; the import below replaces the public versions (mathjs security guide).
   limitedEvaluate = math.evaluate
@@ -184,6 +187,5 @@ export async function calculate(query: string): Promise<ResultItem[]> {
 }
 
 export function warmCalculator(): void {
-  getMath()
   if (getSettings().currencyConversion) void getRates()
 }

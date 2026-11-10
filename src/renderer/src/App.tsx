@@ -16,7 +16,10 @@ import { resetPointer } from './lib/pointer'
 type View = 'search' | 'settings' | 'shortcut'
 const api = window.lumen
 
-function useTheme(settings: Settings | null): void {
+/** How much of the glass tint to keep when the GNOME extension blurs the background for real. */
+const SHELL_BLUR_TINT = 0.7
+
+function useTheme(settings: Settings | null, shellBlur: boolean): void {
   const [systemDark, setSystemDark] = useState(() => matchMedia('(prefers-color-scheme: dark)').matches)
   useEffect(() => {
     const mq = matchMedia('(prefers-color-scheme: dark)')
@@ -29,8 +32,56 @@ function useTheme(settings: Settings | null): void {
     const root = document.documentElement
     root.dataset.theme = settings.theme === 'system' ? (systemDark ? 'dark' : 'light') : settings.theme
     root.style.setProperty('--accent', settings.accent)
-    root.style.setProperty('--glass-alpha', String(settings.glassOpacity))
-  }, [settings, systemDark])
+    root.style.setProperty('--glass-alpha', String(settings.glassOpacity * (shellBlur ? SHELL_BLUR_TINT : 1)))
+    root.toggleAttribute('data-shell-blur', shellBlur)
+  }, [settings, systemDark, shellBlur])
+}
+
+/** Whether the GNOME extension is drawing real blur behind the panel. */
+function useShellBlur(): boolean {
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    api.shellBlur().then(setOn)
+    return api.onShellBlur(setOn)
+  }, [])
+  return on
+}
+
+/**
+ * Reports the panel's rectangle to the main process while it's open, so the GNOME extension
+ * can blur exactly the area behind it. Follows every size change, including animations.
+ */
+function usePanelGeometry(ref: React.RefObject<HTMLElement | null>, open: boolean): void {
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || !open) {
+      api.reportPanel(null)
+      return
+    }
+    let frame = 0
+    const report = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        api.reportPanel({
+          x: el.offsetLeft,
+          y: el.offsetTop,
+          width: el.offsetWidth,
+          height: el.offsetHeight,
+          radius: parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0
+        })
+      })
+    }
+    const ro = new ResizeObserver(report)
+    ro.observe(el)
+    window.addEventListener('resize', report)
+    report()
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', report)
+      cancelAnimationFrame(frame)
+      api.reportPanel(null)
+    }
+  }, [ref, open])
 }
 
 /** Animates the panel body's height to whatever its content needs. */
@@ -80,8 +131,11 @@ export function App() {
   const seq = useRef(0)
   const previewCache = useRef(new Map<string, Preview>())
   const [bodyRef, bodyHeight] = useAutoHeight<HTMLDivElement>()
+  const panelRef = useRef<HTMLDivElement>(null)
+  const shellBlur = useShellBlur()
 
-  useTheme(settings)
+  useTheme(settings, shellBlur)
+  usePanelGeometry(panelRef, open && !!settings)
 
   // ── Wiring to the main process ──────────────────────────────────────────
   useEffect(() => {
@@ -121,6 +175,12 @@ export function App() {
     ]
     return () => offs.forEach((off) => off())
   }, [])
+
+  // Tell the main process we can be shown (after a cold start, nothing is visible until now).
+  const loaded = settings !== null
+  useEffect(() => {
+    if (loaded) api.ready()
+  }, [loaded])
 
   // ── Search ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -326,7 +386,7 @@ export function App() {
 
   let body: React.ReactNode
   if (view === 'settings') {
-    body = <SettingsView settings={settings} onChange={updateSettings} onBack={() => setView('search')} onShortcut={() => setView('shortcut')} />
+    body = <SettingsView settings={settings} onChange={updateSettings} onBack={() => setView('search')} onShortcut={() => setView('shortcut')} shellBlur={shellBlur} />
   } else if (view === 'shortcut') {
     body = <WelcomeView onDone={finishWelcome} onCopy={copy} />
   } else if (run) {
@@ -392,7 +452,7 @@ export function App() {
       }}
     >
       <div className={`backdrop${settings.dimBackground ? ' on' : ''}`} />
-      <div className="panel" onMouseDown={() => menu && setMenu(null)}>
+      <div className="panel" ref={panelRef} onMouseDown={() => menu && setMenu(null)}>
         {searchVisible && (
           <>
             <div className="searchbar">
