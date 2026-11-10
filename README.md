@@ -7,8 +7,8 @@
 **A fast, glassy, Spotlight-style launcher for Linux.**
 Press <kbd>Alt</kbd> + <kbd>Space</kbd> to find apps, files and folders, run terminal commands, do math and conversions, and open or search the web, all from one panel.
 
-[![Release](https://github.com/YOUR_USERNAME/lumen/actions/workflows/release.yml/badge.svg)](https://github.com/YOUR_USERNAME/lumen/actions/workflows/release.yml)
-[![Latest release](https://img.shields.io/github/v/release/YOUR_USERNAME/lumen?color=7c6cff)](https://github.com/YOUR_USERNAME/lumen/releases/latest)
+[![Release](https://github.com/smith8h/lumen/actions/workflows/release.yml/badge.svg)](https://github.com/smith8h/lumen/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/smith8h/lumen?color=7c6cff)](https://github.com/smith8h/lumen/releases/latest)
 ![Platform](https://img.shields.io/badge/platform-Linux-informational)
 ![Wayland](https://img.shields.io/badge/Wayland-native-success)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -44,7 +44,7 @@ Press <kbd>Alt</kbd> + <kbd>Space</kbd> to find apps, files and folders, run ter
 
 ## Install
 
-Download the latest **AppImage** or **.deb** from [Releases](https://github.com/YOUR_USERNAME/lumen/releases/latest).
+Download the latest **AppImage** or **.deb** from [Releases](https://github.com/smith8h/lumen/releases/latest).
 
 **AppImage** (any distro, no root needed):
 
@@ -90,7 +90,7 @@ GNOME doesn't let regular apps blur what's behind their windows, so on its own L
 
 It needs GNOME Shell 50. Lumen works the same without it.
 
-1. Download `lumen@lumenlauncher.github.io.shell-extension.zip` from [Releases](https://github.com/YOUR_USERNAME/lumen/releases/latest), or build it with `npm run extension:pack`.
+1. Download `lumen@lumenlauncher.github.io.shell-extension.zip` from [Releases](https://github.com/smith8h/lumen/releases/latest), or build it with `npm run extension:pack`.
 2. Install it:
    ```bash
    gnome-extensions install --force lumen@lumenlauncher.github.io.shell-extension.zip

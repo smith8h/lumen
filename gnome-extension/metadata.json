@@ -3,6 +3,6 @@
   "name": "Lumen Glass",
   "description": "Companion for the Lumen launcher: real background blur behind Lumen's glass panel, keeps the panel out of the dash, dock and Alt+Tab, and makes sure it gets keyboard focus. Lumen works without it; this makes it look and feel native.",
   "shell-version": ["50"],
-  "url": "https://github.com/YOUR_USERNAME/lumen",
+  "url": "https://github.com/smith8h/lumen",
   "version-name": "0.1.0"
 }
