@@ -25,7 +25,6 @@ function writeJson(file: string, data: unknown): void {
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   accent: '#7c6cff',
-  glassOpacity: 0.62,
   searchEngine: 'google',
   customSearchUrl: 'https://example.com/search?q=%s',
   terminal: 'auto',
@@ -39,7 +38,6 @@ export const DEFAULT_SETTINGS: Settings = {
   ],
   includeHidden: false,
   launchAtLogin: true,
-  dimBackground: false,
   showPreview: true,
   currencyConversion: true,
   freeMemoryWhenIdle: true,
@@ -50,7 +48,10 @@ let settings: Settings = { ...DEFAULT_SETTINGS }
 const listeners = new Set<(s: Settings) => void>()
 
 export function loadSettings(): Settings {
-  settings = { ...DEFAULT_SETTINGS, ...readJson<Partial<Settings>>('settings.json', {}) }
+  const saved = readJson<Record<string, unknown>>('settings.json', {})
+  // Keep only keys Lumen still knows, so retired options (e.g. glassOpacity) drop out on the next save.
+  const known = Object.fromEntries(Object.entries(saved).filter(([k]) => k in DEFAULT_SETTINGS)) as Partial<Settings>
+  settings = { ...DEFAULT_SETTINGS, ...known }
   return settings
 }
 

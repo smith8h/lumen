@@ -1,21 +1,84 @@
-/* Lumen design tokens — one place for colour, glass, type, radius and motion. */
+/*
+ * Lumen design system — "Refined glass".
+ *
+ * Three layers, used in this order:
+ *   1. Primitives  — raw scales (space, type, radius, motion). Theme-independent.
+ *   2. Semantic    — what a value is *for* (text, fill, stroke, glass, accent, status, elevation).
+ *                    Redefined per theme; components only ever read these.
+ *   3. Components  — app.css. No raw colours or magic numbers there, only tokens.
+ *
+ * Principles
+ *   • Glass first: one tinted, frosted panel; everything inside is a translucent layer on it.
+ *   • Neutral by default: the accent marks selection, focus and "on" — nothing decorative.
+ *   • Hairlines over boxes: separation comes from 1px strokes and fills, not heavy borders.
+ *   • Motion is quick and physical: ease-out for movement, a small spring for arrivals.
+ */
 
+/* ── 1. Primitives ─────────────────────────────────────────────────────── */
 :root {
   interpolate-size: allow-keywords;
 
+  /* Type */
   --font-sans: 'Inter Variable', Inter, 'Cantarell', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
 
-  --accent: #7c6cff;
-  --glass-alpha: 0.8;
+  --text-2xs: 10.5px; /* overlines */
+  --text-xs: 11.5px; /* captions, keycaps, chips */
+  --text-sm: 12.5px; /* hints, secondary copy, controls */
+  --text-md: 13.5px; /* body, field labels */
+  --text-base: 14px; /* result titles */
+  --text-lg: 15.5px; /* top hit */
+  --text-xl: 17px; /* view titles, preview headings */
+  --text-2xl: 22px; /* search input */
+  --text-3xl: 26px; /* welcome */
+  --text-display: 34px; /* calculator result */
 
-  --panel-width: 760px;
-  --radius-panel: 24px;
-  --radius-lg: 16px;
-  --radius-row: 12px;
-  --radius-sm: 8px;
+  --weight-regular: 420;
+  --weight-medium: 520;
+  --weight-semibold: 600;
+  --weight-bold: 680;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.45;
+  --leading-relaxed: 1.6;
+
+  --tracking-tight: -0.015em;
+  --tracking-normal: 0;
+  --tracking-overline: 0.06em;
+
+  /* Space (4px grid, with 2/6/10 half-steps for dense UI) */
+  --space-0: 2px;
+  --space-1: 4px;
+  --space-1h: 6px;
+  --space-2: 8px;
+  --space-2h: 10px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Radius — nested surfaces step down so corners stay concentric */
+  --radius-xs: 6px; /* keycaps, thumbnails */
+  --radius-sm: 8px; /* small controls, chips */
+  --radius-md: 10px; /* buttons, inputs, menu items */
+  --radius-row: 12px; /* result rows */
+  --radius-lg: 14px; /* cards, groups, code blocks */
+  --radius-xl: 18px; /* popovers */
+  --radius-panel: 22px; /* the panel */
   --radius-pill: 999px;
 
+  /* Size */
+  --panel-width: 760px;
+  --control-sm: 28px;
+  --control-md: 32px;
+  --control-lg: 36px;
+  --row-height: 46px;
+  --row-height-top: 58px;
+  --body-max: 420px;
+  --settings-height: 440px;
+
+  /* Motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
   --ease-spring: cubic-bezier(0.34, 1.42, 0.64, 1);
@@ -23,60 +86,119 @@
   --dur: 180ms;
   --dur-slow: 260ms;
 
-  --accent-soft: color-mix(in oklab, var(--accent) 22%, transparent);
-  --accent-strong: color-mix(in oklab, var(--accent) 85%, white 15%);
+  /* Accent (overridden at runtime from settings) */
+  --accent: #7c6cff;
 }
 
-/* ── Dark glass (default) ────────────────────────────────────────────────── */
+/* ── 2. Semantic: dark glass (default) ─────────────────────────────────── */
 :root,
 [data-theme='dark'] {
   color-scheme: dark;
-  --glass-tint: 18 18 26;
-  --glass-bg: rgb(var(--glass-tint) / var(--glass-alpha));
-  --glass-border: rgb(255 255 255 / 0.11);
-  --glass-edge: rgb(255 255 255 / 0.16);
-  --glass-sheen: rgb(255 255 255 / 0.07);
-  --surface-1: rgb(255 255 255 / 0.045);
-  --surface-2: rgb(255 255 255 / 0.075);
-  --surface-3: rgb(255 255 255 / 0.11);
-  --text: rgb(255 255 255 / 0.95);
+
+  /* Glass — a fixed tint. With the GNOME extension's real blur behind it, it thins out. */
+  --glass-tint: 22 22 30;
+  --glass-alpha: 0.8;
+  --glass-alpha-blur: 0.56;
+  --glass-solid: rgb(var(--glass-tint) / 0.97);
+  --glass-edge: rgb(255 255 255 / 0.14); /* top highlight */
+  --glass-sheen: rgb(255 255 255 / 0.05);
+  --glass-aurora: 14%;
+  --noise-opacity: 0.045;
+
+  /* Text */
+  --text: rgb(255 255 255 / 0.94);
   --text-2: rgb(235 235 245 / 0.62);
-  --text-3: rgb(235 235 245 / 0.38);
-  --divider: rgb(255 255 255 / 0.07);
-  --row-selected: color-mix(in oklab, var(--accent) 30%, rgb(255 255 255 / 0.04));
-  --row-selected-edge: color-mix(in oklab, var(--accent) 55%, rgb(255 255 255 / 0.2));
-  --kbd-bg: rgb(255 255 255 / 0.08);
-  --kbd-edge: rgb(255 255 255 / 0.12);
-  --shadow-panel: 0 40px 100px -24px rgb(0 0 0 / 0.7), 0 16px 40px -16px rgb(0 0 0 / 0.55), 0 0 0 0.5px rgb(0 0 0 / 0.6);
+  --text-3: rgb(235 235 245 / 0.4);
+  --text-4: rgb(235 235 245 / 0.26);
+  --text-on-accent: #fff;
+
+  /* Fills — stacked translucent layers */
+  --fill-1: rgb(255 255 255 / 0.04);
+  --fill-2: rgb(255 255 255 / 0.07);
+  --fill-3: rgb(255 255 255 / 0.11);
+  --fill-inset: rgb(0 0 0 / 0.24); /* code, terminal output */
+
+  /* Strokes */
+  --stroke-hairline: rgb(255 255 255 / 0.065);
+  --stroke: rgb(255 255 255 / 0.1);
+  --stroke-strong: rgb(255 255 255 / 0.16);
+
+  /* Selection */
+  --select-fill: color-mix(in oklab, var(--accent) 24%, rgb(255 255 255 / 0.03));
+  --select-stroke: color-mix(in oklab, var(--accent) 50%, rgb(255 255 255 / 0.14));
+  --select-glow: color-mix(in oklab, var(--accent) 55%, transparent);
+
+  /* Keycaps */
+  --kbd-fill: rgb(255 255 255 / 0.07);
+  --kbd-stroke: rgb(255 255 255 / 0.12);
+
+  /* Status */
   --danger: #ff6b7a;
   --success: #4ade80;
-  --noise-opacity: 0.05;
-  --backdrop: rgb(0 0 0 / 0.28);
+  --warning: #fbbf24;
+
+  /* Elevation */
+  --shadow-panel: 0 40px 100px -24px rgb(0 0 0 / 0.7), 0 16px 40px -16px rgb(0 0 0 / 0.5), 0 0 0 0.5px rgb(0 0 0 / 0.6);
+  --shadow-popover: 0 24px 60px -18px rgb(0 0 0 / 0.7), 0 0 0 0.5px rgb(0 0 0 / 0.5);
+  --shadow-control: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-icon: drop-shadow(0 2px 4px rgb(0 0 0 / 0.28));
 }
 
-/* ── Light glass ─────────────────────────────────────────────────────────── */
+/* ── 2. Semantic: light glass ──────────────────────────────────────────── */
 [data-theme='light'] {
   color-scheme: light;
-  --glass-tint: 248 248 252;
-  --glass-border: rgb(0 0 0 / 0.08);
-  --glass-edge: rgb(255 255 255 / 0.9);
-  --glass-sheen: rgb(255 255 255 / 0.5);
-  --surface-1: rgb(0 0 0 / 0.035);
-  --surface-2: rgb(0 0 0 / 0.055);
-  --surface-3: rgb(0 0 0 / 0.08);
+
+  --glass-tint: 246 246 250;
+  --glass-alpha: 0.78;
+  --glass-alpha-blur: 0.58;
+  --glass-edge: rgb(255 255 255 / 0.85);
+  --glass-sheen: rgb(255 255 255 / 0.45);
+  --glass-aurora: 10%;
+  --noise-opacity: 0.03;
+
   --text: rgb(18 18 28 / 0.94);
-  --text-2: rgb(40 40 60 / 0.62);
-  --text-3: rgb(40 40 60 / 0.42);
-  --divider: rgb(0 0 0 / 0.07);
-  --row-selected: color-mix(in oklab, var(--accent) 18%, rgb(255 255 255 / 0.5));
-  --row-selected-edge: color-mix(in oklab, var(--accent) 40%, transparent);
-  --kbd-bg: rgb(0 0 0 / 0.05);
-  --kbd-edge: rgb(0 0 0 / 0.1);
-  --shadow-panel: 0 40px 90px -24px rgb(30 30 60 / 0.35), 0 14px 36px -16px rgb(30 30 60 / 0.3), 0 0 0 0.5px rgb(0 0 0 / 0.12);
+  --text-2: rgb(40 40 60 / 0.64);
+  --text-3: rgb(40 40 60 / 0.44);
+  --text-4: rgb(40 40 60 / 0.3);
+
+  --fill-1: rgb(0 0 0 / 0.03);
+  --fill-2: rgb(0 0 0 / 0.05);
+  --fill-3: rgb(0 0 0 / 0.08);
+  --fill-inset: rgb(255 255 255 / 0.55);
+
+  --stroke-hairline: rgb(0 0 0 / 0.065);
+  --stroke: rgb(0 0 0 / 0.09);
+  --stroke-strong: rgb(0 0 0 / 0.14);
+
+  --select-fill: color-mix(in oklab, var(--accent) 16%, rgb(255 255 255 / 0.55));
+  --select-stroke: color-mix(in oklab, var(--accent) 38%, transparent);
+  --select-glow: color-mix(in oklab, var(--accent) 35%, transparent);
+
+  --kbd-fill: rgb(0 0 0 / 0.045);
+  --kbd-stroke: rgb(0 0 0 / 0.1);
+
   --danger: #e5484d;
   --success: #16a34a;
-  --noise-opacity: 0.035;
-  --backdrop: rgb(20 20 40 / 0.14);
+  --warning: #d97706;
+
+  --shadow-panel: 0 40px 90px -24px rgb(30 30 60 / 0.35), 0 14px 36px -16px rgb(30 30 60 / 0.28), 0 0 0 0.5px rgb(0 0 0 / 0.12);
+  --shadow-popover: 0 24px 60px -18px rgb(30 30 60 / 0.4), 0 0 0 0.5px rgb(0 0 0 / 0.12);
+  --shadow-control: 0 1px 2px rgb(30 30 60 / 0.18);
+  --shadow-icon: drop-shadow(0 2px 4px rgb(30 30 60 / 0.2));
+}
+
+/* Derived tokens — var() resolves on the element, so these follow whichever theme is active. */
+:root {
+  --glass-bg: rgb(var(--glass-tint) / var(--glass-alpha));
+  --accent-soft: color-mix(in oklab, var(--accent) 18%, transparent);
+  --accent-stroke: color-mix(in oklab, var(--accent) 36%, transparent);
+  --accent-strong: color-mix(in oklab, var(--accent) 82%, var(--text) 18%);
+  --focus-ring: 0 0 0 1px var(--accent), 0 0 0 4px var(--accent-soft);
+}
+
+/* Real blur from the Lumen Glass GNOME extension: let more of it through. */
+[data-shell-blur] {
+  --glass-bg: rgb(var(--glass-tint) / var(--glass-alpha-blur));
 }
 
 @media (prefers-reduced-motion: reduce) {

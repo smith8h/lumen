@@ -98,7 +98,6 @@ function sanitize(patch: Partial<Settings>): Partial<Settings> {
     if (Array.isArray(DEFAULT_SETTINGS[k]) && !(Array.isArray(v) && v.every((x) => typeof x === 'string'))) continue
     ;(out as Record<string, unknown>)[k] = v
   }
-  if (typeof out.glassOpacity === 'number') out.glassOpacity = Math.min(1, Math.max(0.2, out.glassOpacity))
   if (out.accent && !/^#[0-9a-f]{6}$/i.test(out.accent)) delete out.accent
   return out
 }

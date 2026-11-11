@@ -16,9 +16,6 @@ import { resetPointer } from './lib/pointer'
 type View = 'search' | 'settings' | 'shortcut'
 const api = window.lumen
 
-/** How much of the glass tint to keep when the GNOME extension blurs the background for real. */
-const SHELL_BLUR_TINT = 0.7
-
 function useTheme(settings: Settings | null, shellBlur: boolean): void {
   const [systemDark, setSystemDark] = useState(() => matchMedia('(prefers-color-scheme: dark)').matches)
   useEffect(() => {
@@ -32,7 +29,6 @@ function useTheme(settings: Settings | null, shellBlur: boolean): void {
     const root = document.documentElement
     root.dataset.theme = settings.theme === 'system' ? (systemDark ? 'dark' : 'light') : settings.theme
     root.style.setProperty('--accent', settings.accent)
-    root.style.setProperty('--glass-alpha', String(settings.glassOpacity * (shellBlur ? SHELL_BLUR_TINT : 1)))
     root.toggleAttribute('data-shell-blur', shellBlur)
   }, [settings, systemDark, shellBlur])
 }
@@ -386,7 +382,7 @@ export function App() {
 
   let body: React.ReactNode
   if (view === 'settings') {
-    body = <SettingsView settings={settings} onChange={updateSettings} onBack={() => setView('search')} onShortcut={() => setView('shortcut')} shellBlur={shellBlur} />
+    body = <SettingsView settings={settings} onChange={updateSettings} onBack={() => setView('search')} onShortcut={() => setView('shortcut')} onToast={flash} shellBlur={shellBlur} />
   } else if (view === 'shortcut') {
     body = <WelcomeView onDone={finishWelcome} onCopy={copy} />
   } else if (run) {
@@ -448,10 +444,9 @@ export function App() {
     <div
       className={`stage${open ? ' open' : ''}`}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('backdrop')) api.hide()
+        if (e.target === e.currentTarget) api.hide()
       }}
     >
-      <div className={`backdrop${settings.dimBackground ? ' on' : ''}`} />
       <div className="panel" ref={panelRef} onMouseDown={() => menu && setMenu(null)}>
         {searchVisible && (
           <>

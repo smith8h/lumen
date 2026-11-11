@@ -143,8 +143,6 @@ export type SearchEngineId = 'google' | 'duckduckgo' | 'brave' | 'bing' | 'start
 export interface Settings {
   theme: ThemeMode
   accent: string
-  /** 0..1 — how see-through the glass is. */
-  glassOpacity: number
   searchEngine: SearchEngineId
   customSearchUrl: string
   terminal: string
@@ -153,7 +151,6 @@ export interface Settings {
   excludeDirs: string[]
   includeHidden: boolean
   launchAtLogin: boolean
-  dimBackground: boolean
   showPreview: boolean
   currencyConversion: boolean
   /** Unload the panel's page after it has been hidden for a while. */
