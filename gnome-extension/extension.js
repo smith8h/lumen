@@ -7,11 +7,16 @@
 //   • puts blurred glass under Lumen's window, clipped to the panel's rounded rectangle,
 //   • keeps Lumen's window out of the dash, dock and Alt+Tab,
 //   • makes sure the panel gets keyboard focus when it opens,
-//   • sets Lumen's ShellBlur property so Lumen can make its own tint more see-through.
+//   • sets Lumen's ShellBlur property so Lumen can make its own tint more see-through,
+//   • tells Lumen which window had focus before the panel (PreviousWindow), so pasting from
+//     clipboard history picks Ctrl+Shift+V for terminals and can reach XWayland windows,
+//   • tells Lumen when a password manager copies a secret (ClipboardSecret), so it stays out
+//     of clipboard history. Only the mime type is looked at, never the copied text.
 // Lumen works the same without it; the extension only adds to it.
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
@@ -37,6 +42,11 @@ export default class LumenExtension extends Extension {
             () => this._onLumenVanished());
 
         this._windowCreatedId = global.display.connect('window-created', (_display, window) => this._track(window));
+        this._lastOther = null;
+        this._focusId = global.display.connect('notify::focus-window', () => this._onFocusChanged());
+        this._selection = global.display.get_selection();
+        this._ownerChangedId = this._selection.connect('owner-changed',
+            (_selection, type, source) => this._onClipboardOwnerChanged(type, source));
         this._trackExisting();
     }
 
@@ -45,6 +55,12 @@ export default class LumenExtension extends Extension {
         this._watchId = 0;
         global.display.disconnect(this._windowCreatedId);
         this._windowCreatedId = 0;
+        global.display.disconnect(this._focusId);
+        this._focusId = 0;
+        this._selection.disconnect(this._ownerChangedId);
+        this._ownerChangedId = 0;
+        this._selection = null;
+        this._lastOther = null;
         this._cancellable.cancel();
         this._cancellable = null;
 
@@ -122,6 +138,52 @@ export default class LumenExtension extends Extension {
             });
     }
 
+    // ── The window Lumen was opened over ──────────────────────────────────────
+
+    _onFocusChanged() {
+        const window = global.display.focus_window;
+        if (!window || !this._tracked)
+            return;
+        if (!this._tracked.has(window)) {
+            if (!window.is_override_redirect())
+                this._lastOther = window;
+            return;
+        }
+        // The panel just took focus: tell Lumen what it came from (class and protocol only).
+        const prev = this._lastOther;
+        if (!this._lumenOwner || !prev || prev.get_compositor_private() === null)
+            return;
+        const wmClass = prev.get_wm_class() ?? '';
+        const x11 = prev.get_client_type() === Meta.WindowClientType.X11;
+        this._callLumen('PreviousWindow', new GLib.Variant('(sb)', [wmClass, x11]));
+    }
+
+    // ── Secrets on the clipboard ─────────────────────────────────────────────
+
+    _onClipboardOwnerChanged(type, source) {
+        if (type !== Meta.SelectionType.SELECTION_CLIPBOARD || !source || !this._lumenOwner)
+            return;
+        // KeePassXC, Bitwarden and friends add this KDE hint to passwords they copy.
+        if (!source.get_mimetypes().includes('x-kde-passwordManagerHint'))
+            return;
+        this._callLumen('ClipboardSecret', null);
+    }
+
+    _callLumen(method, params) {
+        Gio.DBus.session.call(
+            BUS_NAME, OBJECT_PATH, INTERFACE, method, params,
+            null, Gio.DBusCallFlags.NO_AUTO_START, 1000, this._cancellable,
+            (conn, res) => {
+                try {
+                    conn.call_finish(res);
+                } catch (e) {
+                    // An older Lumen without this method: nothing to do.
+                    if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                        console.debug(`Lumen: ${method} not sent: ${e.message}`);
+                }
+            });
+    }
+
     _setGeometry(geometry) {
         if (!this._tracked)
             return;
@@ -143,8 +205,13 @@ export default class LumenExtension extends Extension {
     _isLumen(window) {
         if (window.is_override_redirect())
             return false;
+        // Only the panel's own window. Tooltips, menus and dialogs are separate windows of the
+        // same process; glass under them would show up offset by the panel's position.
+        if (window.get_window_type() !== Meta.WindowType.NORMAL || window.get_transient_for())
+            return false;
+        // Also skip the tiny helper window Lumen maps once at startup for clipboard history.
         if (this._lumenPid && window.get_pid() === this._lumenPid)
-            return !window.get_title()?.startsWith('DevTools');
+            return !window.get_title()?.startsWith('DevTools') && window.get_title() !== 'Lumen Clipboard';
         return WM_CLASSES.has(window.get_wm_class()) && window.get_title() === 'Lumen';
     }
 

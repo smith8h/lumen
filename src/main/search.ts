@@ -3,6 +3,7 @@ import type { GlyphName, ResultItem, ResultSection, SearchResponse, SectionId } 
 import { SEARCH_ENGINES } from '@shared/constants'
 import { frequentApps, getApp, searchApps } from './providers/apps'
 import { calculate } from './providers/calculator'
+import { clipResults } from './clipboard'
 import { bareCommandResult, commandResults } from './providers/terminal'
 import { systemResults } from './providers/system'
 import { asUrl, webResults } from './providers/web'
@@ -12,6 +13,7 @@ import { getSettings } from './store'
 const TITLES: Record<SectionId, string> = {
   top: 'Top Hit',
   calc: 'Calculator',
+  clipboard: 'Clipboard',
   apps: 'Applications',
   commands: 'Commands',
   files: 'Files',
@@ -20,7 +22,7 @@ const TITLES: Record<SectionId, string> = {
   system: 'System'
 }
 
-const ORDER: SectionId[] = ['calc', 'top', 'apps', 'system', 'folders', 'files', 'commands', 'web']
+const ORDER: SectionId[] = ['clipboard', 'calc', 'top', 'apps', 'system', 'folders', 'files', 'commands', 'web']
 
 function sectionOf(item: ResultItem): SectionId {
   switch (item.kind) {
@@ -32,6 +34,8 @@ function sectionOf(item: ResultItem): SectionId {
       return 'folders'
     case 'calc':
       return 'calc'
+    case 'clip':
+      return 'clipboard'
     case 'url':
     case 'web':
       return 'web'
@@ -80,6 +84,11 @@ export async function search(query: string, seq: number): Promise<SearchResponse
   } else if (q.startsWith('?')) {
     mode = { label: engineName(), glyph: 'globe' }
     items = webResults(q.slice(1)).map((i) => ({ ...i, score: i.score + 2000 }))
+    topHit = false
+  } else if (q.startsWith(';')) {
+    // Clipboard history only ever shows up behind its prefix (privacy, and less noise).
+    mode = { label: getSettings().clipboardPaused ? 'Clipboard · paused' : 'Clipboard', glyph: 'clipboard' }
+    items = clipResults(q.slice(1).trim())
     topHit = false
   } else if (/^(~\/|\/|~$)/.test(q)) {
     mode = { label: 'Files', glyph: 'folder' as GlyphName }

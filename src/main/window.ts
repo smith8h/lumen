@@ -73,6 +73,41 @@ export function createPanel(icon?: string): BrowserWindow {
   return win
 }
 
+/** Title of the throwaway window used by primeClipboard(); the GNOME extension leaves it alone. */
+export const CLIPBOARD_PRIMER_TITLE = `${APP_NAME} Clipboard`
+let primed = false
+
+/**
+ * Chromium on Wayland only starts receiving other apps' clipboard changes once one of its
+ * windows has been mapped. After a `--hidden` start at login, nothing has been, so clipboard
+ * history would stay blind until the first Alt+Space. Map a tiny transparent window that
+ * can't take focus for a moment instead; afterwards it keeps working with no windows at all.
+ */
+export function primeClipboard(): void {
+  if (primed || !isWayland() || shownAt) return
+  primed = true
+  const w = new BrowserWindow({
+    title: CLIPBOARD_PRIMER_TITLE,
+    width: 1,
+    height: 1,
+    show: false,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
+    focusable: false,
+    skipTaskbar: true,
+    resizable: false,
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
+  })
+  w.setIgnoreMouseEvents(true)
+  w.once('ready-to-show', () => {
+    w.showInactive()
+    setTimeout(() => !w.isDestroyed() && w.destroy(), 300)
+  })
+  void w.loadURL('about:blank')
+}
+
 let quitting = false
 export const setQuitting = (): void => {
   quitting = true
@@ -80,6 +115,8 @@ export const setQuitting = (): void => {
 
 export const panel = (): BrowserWindow | null => (win && !win.isDestroyed() ? win : null)
 export const isPanelVisible = (): boolean => !!panel()?.isVisible()
+/** When the panel was last shown (ms since epoch). */
+export const lastShownAt = (): number => shownAt
 
 /** The page calls this once its listeners are attached, so a show never goes unanswered. */
 export function panelReady(sender: Electron.WebContents): void {

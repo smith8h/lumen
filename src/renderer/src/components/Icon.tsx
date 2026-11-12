@@ -1,6 +1,6 @@
 import {
-  BellOff, Calculator, CircleX, Copy, File, Folder, Globe, Keyboard, Lock, LogOut, Moon, Power,
-  RefreshCw, RotateCcw, Search, Settings, Sparkles, SquareTerminal, Sun, Trash2, Wifi, type LucideIcon
+  BellOff, Calculator, CircleX, Clipboard, ClipboardPaste, Copy, File, Folder, Globe, Keyboard, Lock, LogOut, Moon, Power,
+  Pin, RefreshCw, RotateCcw, Search, Settings, Sparkles, SquareTerminal, Sun, Trash2, Wifi, type LucideIcon
 } from 'lucide-react'
 import { useState } from 'react'
 import type { GlyphName, IconSpec } from '@shared/types'
@@ -26,7 +26,10 @@ export const GLYPHS: Record<GlyphName, LucideIcon> = {
   quit: CircleX,
   sparkles: Sparkles,
   copy: Copy,
-  keyboard: Keyboard
+  keyboard: Keyboard,
+  clipboard: Clipboard,
+  pin: Pin,
+  paste: ClipboardPaste
 }
 
 /** macOS-style colourful tiles for built-in result types. */
@@ -51,7 +54,10 @@ const TINTS: Partial<Record<GlyphName, [string, string]>> = {
   quit: ['#ff9a9a', '#d94848'],
   sparkles: ['#b69cff', '#7c6cff'],
   copy: ['#a0a7b8', '#5c6478'],
-  keyboard: ['#b69cff', '#7c6cff']
+  keyboard: ['#b69cff', '#7c6cff'],
+  clipboard: ['#ffd27a', '#e8912d'],
+  pin: ['#ff9eb5', '#e0457b'],
+  paste: ['#ffd27a', '#e8912d']
 }
 
 export function GlyphTile({ name }: { name: GlyphName }) {

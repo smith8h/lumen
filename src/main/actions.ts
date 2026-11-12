@@ -1,10 +1,12 @@
 // Executes result actions. Everything coming from the renderer is re-validated here.
-import { app, clipboard, shell, type WebContents } from 'electron'
+import { app, shell, type WebContents } from 'electron'
 import { existsSync } from 'node:fs'
 import type { Action, ExecuteResult, Preview, ResultItem } from '@shared/types'
+import { clearClips, clipPreview, deleteClip, getClip, pinClip, touchClip, writeClipboard } from './clipboard'
 import { spawnDetached, which } from './env'
 import { filePreview, reindex } from './files'
 import { appPreview, launchApp } from './providers/apps'
+import { pasteText } from './paste'
 import { killRun, openInTerminal, runInline } from './providers/terminal'
 import { runSystem } from './providers/system'
 import { recordCommand, recordUse } from './store'
@@ -40,9 +42,32 @@ export async function execute(item: Pick<ResultItem, 'action' | 'historyKey'>, s
         await openInTerminal(null, existsSync(String(a.path)) ? String(a.path) : undefined)
         return { ok: true }
       case 'copy':
-        clipboard.writeText(String(a.text))
+        await writeClipboard(String(a.text))
         remember()
         return { ok: true, toast: 'Copied to clipboard' }
+      case 'clip-paste': {
+        const clip = getClip(String(a.id))
+        if (!clip) return { ok: false, error: 'That clip is gone' }
+        touchClip(clip.id)
+        return pasteText(clip.text, { terminal: a.terminal === true ? true : undefined })
+      }
+      case 'clip-copy': {
+        const clip = getClip(String(a.id))
+        if (!clip) return { ok: false, error: 'That clip is gone' }
+        await writeClipboard(clip.text)
+        touchClip(clip.id)
+        return { ok: true, toast: 'Copied to clipboard' }
+      }
+      case 'clip-pin':
+        if (!pinClip(String(a.id), a.pinned === true)) return { ok: false, error: 'That clip is gone' }
+        return { ok: true, keepOpen: true, refresh: true, toast: a.pinned === true ? 'Pinned' : 'Unpinned' }
+      case 'clip-delete':
+        if (!deleteClip(String(a.id))) return { ok: false, error: 'That clip is gone' }
+        return { ok: true, keepOpen: true, refresh: true, toast: 'Deleted' }
+      case 'clip-clear': {
+        const n = clearClips()
+        return { ok: true, toast: n ? `Cleared ${n} clip${n === 1 ? '' : 's'}` : 'Clipboard history is already empty' }
+      }
       case 'open-url': {
         const url = String(a.url)
         if (!SAFE_URL.test(url)) throw new Error('Unsupported link')
@@ -92,6 +117,7 @@ export async function preview(item: Pick<ResultItem, 'kind' | 'action' | 'title'
   const a = item.action
   if (a.type === 'launch-app') return appPreview(a.desktopId)
   if (a.type === 'open-path') return filePreview(a.path)
+  if (a.type === 'clip-paste') return clipPreview(a.id)
   if (item.kind === 'calc') {
     const expression = item.id?.startsWith('calc:') ? item.id.slice(5) : (item.subtitle ?? '').replace(/\s*=$/, '')
     return { type: 'calc', expression, result: item.title, detail: item.subtitle }

@@ -1,12 +1,12 @@
 import { app } from 'electron'
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { Settings } from '@shared/types'
 
 const dir = () => app.getPath('userData')
 
-function readJson<T>(file: string, fallback: T): T {
+export function readJson<T>(file: string, fallback: T): T {
   try {
     return JSON.parse(readFileSync(join(dir(), file), 'utf8')) as T
   } catch {
@@ -14,12 +14,18 @@ function readJson<T>(file: string, fallback: T): T {
   }
 }
 
-/** Write atomically so a crash never leaves half a file behind. */
-function writeJson(file: string, data: unknown): void {
+/** Write atomically so a crash never leaves half a file behind. `mode` restricts who can read it. */
+export function writeJson(file: string, data: unknown, mode?: number): void {
   if (!existsSync(dir())) mkdirSync(dir(), { recursive: true })
   const target = join(dir(), file)
-  writeFileSync(target + '.tmp', JSON.stringify(data, null, 2))
+  writeFileSync(target + '.tmp', JSON.stringify(data, null, 2), mode === undefined ? undefined : { mode })
+  // `mode` only applies when the file is created; a leftover .tmp keeps its old permissions.
+  if (mode !== undefined) chmodSync(target + '.tmp', mode)
   renameSync(target + '.tmp', target)
+}
+
+export function removeJson(file: string): void {
+  rmSync(join(dir(), file), { force: true })
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -41,6 +47,11 @@ export const DEFAULT_SETTINGS: Settings = {
   showPreview: true,
   currencyConversion: true,
   freeMemoryWhenIdle: true,
+  clipboardEnabled: true,
+  clipboardPersist: true,
+  clipboardMax: 200,
+  clipboardIgnoreSecrets: true,
+  clipboardPaused: false,
   firstRunDone: false
 }
 

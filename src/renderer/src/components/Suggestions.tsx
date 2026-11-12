@@ -4,10 +4,11 @@ import { ResultList } from './ResultList'
 import { pointerMoved } from '../lib/pointer'
 
 const TIPS = [
-  { code: '>', text: 'Run a command' },
-  { code: '=', text: 'Calculate' },
-  { code: '?', text: 'Search the web' },
-  { code: '~/', text: 'Browse files' }
+  { code: '=', text: 'calculate' },
+  { code: '>', text: 'run a command' },
+  { code: '?', text: 'search the web' },
+  { code: ';', text: 'clipboard' },
+  { code: '~/', text: 'browse files' }
 ]
 
 interface Props {
@@ -27,14 +28,16 @@ export function Suggestions({ sections, selected, onHover, onRun, onTip }: Props
       {apps && (
         <>
           <div className="section-title">{apps.title}</div>
-          <div className="grid">
+          {/* At least six columns, so a short list doesn't stretch into giant tiles. */}
+          <div className="grid" style={{ ['--cols' as string]: Math.max(6, apps.items.length) }}>
             {apps.items.map((item, i) => (
               <div
                 key={item.id}
                 className={`tile-app${i === selected ? ' selected' : ''}`}
                 onMouseMove={(e) => pointerMoved(e) && i !== selected && onHover(i)}
                 onClick={() => onRun(i)}
-                title={item.subtitle}
+                role="button"
+                aria-label={item.subtitle ? `${item.title}, ${item.subtitle}` : item.title}
               >
                 <Icon spec={item.icon} />
                 <span>{item.title}</span>
@@ -53,13 +56,13 @@ export function Suggestions({ sections, selected, onHover, onRun, onTip }: Props
           />
         </div>
       )}
-      <div className="section-title">Tips</div>
       <div className="tips">
+        <span className="lead-in">Start with</span>
         {TIPS.map((t) => (
-          <div className="tip" key={t.code} onClick={() => onTip(t.code === '~/' ? '~/' : `${t.code} `)}>
+          <button className="tip" key={t.code} onClick={() => onTip(t.code === '~/' ? '~/' : `${t.code} `)}>
             <code>{t.code}</code>
             {t.text}
-          </div>
+          </button>
         ))}
       </div>
     </div>

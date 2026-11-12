@@ -34,7 +34,7 @@ function Meta({ rows }: { rows: [string, string | undefined][] }) {
         .map(([k, v]) => (
           <div key={k} style={{ display: 'contents' }}>
             <dt>{k}</dt>
-            <dd title={v}>{v}</dd>
+            <dd>{v}</dd>
           </div>
         ))}
     </dl>
@@ -154,6 +154,24 @@ export function PreviewPane({ item, preview }: { item: ResultItem; preview: Prev
             <h3>{p.name}</h3>
           </div>
           <Meta rows={[['Where', tilde(p.path)], ['Size', size(p.size)], ['Modified', when(p.modified)]]} />
+        </div>
+      )
+    case 'clip':
+      return (
+        <div className="preview" key={key}>
+          <pre className="code clip">
+            {p.text}
+            {p.truncated && <span className="more">{`\n… ${(p.length - p.text.length).toLocaleString()} more characters`}</span>}
+          </pre>
+          <Meta
+            rows={[
+              ['Copied', when(p.lastAt)],
+              ['First copied', p.lastAt - p.firstAt > 60_000 ? when(p.firstAt) : undefined],
+              ['Length', `${p.length.toLocaleString()} character${p.length === 1 ? '' : 's'}`],
+              ['Lines', p.lines.toLocaleString()],
+              ['Pinned', p.pinned ? 'Yes' : 'No']
+            ]}
+          />
         </div>
       )
     case 'calc':

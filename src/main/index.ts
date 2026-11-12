@@ -5,11 +5,13 @@ import { pathToFileURL } from 'node:url'
 import type { AppInfo, PanelRect, ResultItem, Settings } from '@shared/types'
 import { APP_NAME } from '@shared/constants'
 import { execute, killCommand, preview } from './actions'
+import { applyClipboardSettings, clipCount, flushClipboard, initClipboard, markSecretCopy } from './clipboard'
 import { emitPanelGeometry, startDbus } from './dbus'
 import { desktopName, isGnome } from './env'
 import { fileCount, initFiles, reindex } from './files'
 import { canServe } from './icons'
 import { iconFile, integrateAppImage, setAutostart } from './integration'
+import { setPreviousWindow } from './paste'
 import { appCount, initApps } from './providers/apps'
 import { warmCalculator } from './providers/calculator'
 import { search, suggestions } from './search'
@@ -68,7 +70,10 @@ app.on('second-instance', (_e, argv) => {
 app.on('window-all-closed', () => {
   /* stay resident */
 })
-app.on('before-quit', setQuitting)
+app.on('before-quit', () => {
+  setQuitting()
+  flushClipboard()
+})
 
 // ── IPC ────────────────────────────────────────────────────────────────────
 /** True while the GNOME extension draws real blur behind the panel. */
@@ -99,6 +104,10 @@ function sanitize(patch: Partial<Settings>): Partial<Settings> {
     ;(out as Record<string, unknown>)[k] = v
   }
   if (out.accent && !/^#[0-9a-f]{6}$/i.test(out.accent)) delete out.accent
+  if (out.clipboardMax !== undefined) {
+    if (Number.isFinite(out.clipboardMax)) out.clipboardMax = Math.round(Math.min(5000, Math.max(10, out.clipboardMax)))
+    else delete out.clipboardMax
+  }
   return out
 }
 
@@ -128,6 +137,7 @@ function registerIpc(): void {
       desktop: desktopName(),
       indexedFiles: fileCount(),
       indexedApps: appCount(),
+      clipboardItems: clipCount(),
       home: homedir()
     })
   )
@@ -145,6 +155,7 @@ function registerIpc(): void {
 app.whenReady().then(async () => {
   loadSettings()
   loadHistory()
+  initClipboard()
 
   protocol.handle('lumen-icon', (req) => {
     const path = decodeURIComponent(new URL(req.url).pathname)
@@ -162,6 +173,7 @@ app.whenReady().then(async () => {
   const applyUnload = () => setUnloadAfter(getSettings().freeMemoryWhenIdle ? UNLOAD_AFTER_MS : null)
   onSettingsChange((s) => {
     applyUnload()
+    applyClipboardSettings(s)
     panel()?.webContents.send('lumen:settings', s)
     const fileSettings = JSON.stringify([s.fileRoots, s.excludeDirs, s.includeHidden, s.fileSearch])
     if (fileSettings !== lastFileSettings) {
@@ -180,6 +192,8 @@ app.whenReady().then(async () => {
     toggle: () => togglePanel(),
     show: (query) => showPanel({ query }),
     hide: () => hidePanel(true),
+    previousWindow: (wmClass, x11) => setPreviousWindow(wmClass, x11),
+    clipboardSecret: () => markSecretCopy(),
     shellBlurChanged: (enabled) => {
       shellBlur = enabled
       panel()?.webContents.send('lumen:shell-blur', enabled)

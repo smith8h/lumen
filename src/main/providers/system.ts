@@ -11,7 +11,7 @@ interface SysCommand {
   subtitle: string
   keywords: string
   glyph: GlyphName
-  op: SystemOp | 'lumen-settings' | 'lumen-quit' | 'lumen-reindex' | 'lumen-shortcut'
+  op: SystemOp | 'lumen-settings' | 'lumen-quit' | 'lumen-reindex' | 'lumen-shortcut' | 'clip-clear'
   confirm?: string
 }
 
@@ -30,10 +30,14 @@ const COMMANDS: SysCommand[] = [
   { id: 'l-settings', title: `${APP_NAME} Settings`, subtitle: 'Theme, search engine, files, shortcut', keywords: 'lumen preferences config settings options', glyph: 'settings', op: 'lumen-settings' },
   { id: 'l-shortcut', title: `Set Up ${APP_NAME} Shortcut`, subtitle: 'Open Lumen with Alt+Space', keywords: 'lumen shortcut hotkey keybinding alt space', glyph: 'keyboard', op: 'lumen-shortcut' },
   { id: 'l-reindex', title: 'Rebuild File Index', subtitle: `Rescan your files for ${APP_NAME}`, keywords: 'lumen reindex refresh files index rescan', glyph: 'refresh', op: 'lumen-reindex' },
+  { id: 'l-clip-clear', title: 'Clear Clipboard History', subtitle: 'Forget copied text (pinned clips stay)', keywords: 'clipboard history clear forget wipe copied clips', glyph: 'clipboard', op: 'clip-clear', confirm: 'Press Enter again to clear clipboard history' },
   { id: 'l-quit', title: `Quit ${APP_NAME}`, subtitle: 'Stop running in the background', keywords: 'lumen quit exit close', glyph: 'quit', op: 'lumen-quit' }
 ]
 
 function toItem(c: SysCommand, score: number, matches: number[]): ResultItem {
+  if (c.op === 'clip-clear') {
+    return { id: `sys:${c.id}`, kind: 'lumen', title: c.title, subtitle: c.subtitle, icon: { type: 'glyph', name: c.glyph }, score, matches, confirm: c.confirm, action: { type: 'clip-clear' } }
+  }
   const lumenOp = c.op.startsWith('lumen-') ? (c.op.slice(6) as 'settings' | 'quit' | 'reindex' | 'shortcut') : null
   return {
     id: `sys:${c.id}`,

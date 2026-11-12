@@ -1,6 +1,6 @@
 import {
-  ArrowLeft, Check, CircleCheck, ExternalLink, Folder, FolderX, Info, Keyboard, Monitor, Moon, Palette, Plus,
-  RefreshCw, Search, Settings2, Sun, X, type LucideIcon
+  ArrowLeft, Check, CircleCheck, ClipboardList, ExternalLink, Folder, FolderX, Info, Keyboard, Monitor, Moon, Palette, Plus,
+  RefreshCw, Search, Settings2, Sun, Trash2, X, type LucideIcon
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { AppInfo, SearchEngineId, Settings, ShortcutStatus, ThemeMode } from '@shared/types'
@@ -31,15 +31,17 @@ const ENGINES: { id: SearchEngineId; name: string }[] = [
 ]
 const TERMINALS = ['auto', 'ptyxis', 'gnome-terminal', 'kgx', 'konsole', 'kitty', 'alacritty', 'wezterm', 'ghostty', 'foot', 'tilix', 'xfce4-terminal', 'xterm']
 const REPO_URL = 'https://github.com/smith8h/lumen'
+const CLIP_SIZES = [50, 100, 200, 500, 1000]
 
 const openUrl = (url: string) => window.lumen.execute({ action: { type: 'open-url', url } }).then((r) => r.ok && window.lumen.hide())
 
-type PageId = 'general' | 'appearance' | 'search' | 'files' | 'about'
+type PageId = 'general' | 'appearance' | 'search' | 'files' | 'clipboard' | 'about'
 const PAGES: { id: PageId; name: string; icon: LucideIcon; lede: string }[] = [
   { id: 'general', name: 'General', icon: Settings2, lede: 'How Lumen starts and opens.' },
   { id: 'appearance', name: 'Appearance', icon: Palette, lede: 'Theme, colour and layout of the panel.' },
   { id: 'search', name: 'Search', icon: Search, lede: 'The web, calculator and conversions.' },
   { id: 'files', name: 'Files', icon: Folder, lede: 'Which files and folders Lumen can find.' },
+  { id: 'clipboard', name: 'Clipboard', icon: ClipboardList, lede: 'Text you copy, searchable with “;”. It never leaves this computer.' },
   { id: 'about', name: 'About', icon: Info, lede: '' }
 ]
 
@@ -83,7 +85,7 @@ function PathList({ items, onChange, placeholder, mono = true, icon: RowIcon }: 
       {items.map((p) => (
         <div className="path-row" key={p} style={mono ? undefined : { fontFamily: 'inherit' }}>
           <RowIcon />
-          <span title={p}>{tilde(p)}</span>
+          <span>{tilde(p)}</span>
           <button onClick={() => onChange(items.filter((x) => x !== p))} aria-label={`Remove ${p}`}>
             <X size={14} />
           </button>
@@ -126,6 +128,7 @@ export function SettingsView({ settings: s, onChange, onBack, onShortcut, onToas
   const [page, setPage] = useState<PageId>('general')
   const [info, setInfo] = useState<AppInfo | null>(null)
   const [shortcut, setShortcut] = useState<ShortcutStatus | null>(null)
+  const [confirmClear, setConfirmClear] = useState(false)
   const nav = useRef<HTMLElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
 
@@ -136,7 +139,15 @@ export function SettingsView({ settings: s, onChange, onBack, onShortcut, onToas
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 })
+    setConfirmClear(false)
   }, [page])
+
+  // The clear button asks twice; the second click must come soon after the first.
+  useEffect(() => {
+    if (!confirmClear) return
+    const t = setTimeout(() => setConfirmClear(false), 3000)
+    return () => clearTimeout(t)
+  }, [confirmClear])
 
   // ↑/↓ (or Ctrl+Tab) move between pages unless a text field or dropdown has focus.
   useEffect(() => {
@@ -165,11 +176,22 @@ export function SettingsView({ settings: s, onChange, onBack, onShortcut, onToas
     onToast(res.ok ? 'Rebuilding file index…' : (res.error ?? 'Could not rebuild the index'))
   }
 
+  const clearClips = async () => {
+    if (!confirmClear) {
+      setConfirmClear(true)
+      return
+    }
+    setConfirmClear(false)
+    const res = await window.lumen.execute({ action: { type: 'clip-clear' } })
+    onToast(res.ok ? (res.toast ?? 'Clipboard history cleared') : (res.error ?? 'Could not clear the history'))
+    window.lumen.appInfo().then(setInfo)
+  }
+
   return (
     <div className="settings">
       <nav className="settings-nav" ref={nav} aria-label="Settings sections">
         <header>
-          <button className="icon-btn" onClick={onBack} aria-label="Back to search" title="Back (Esc)">
+          <button className="icon-btn" onClick={onBack} aria-label="Back to search (Esc)">
             <ArrowLeft size={18} />
           </button>
           <h1>Settings</h1>
@@ -266,7 +288,6 @@ export function SettingsView({ settings: s, onChange, onBack, onShortcut, onToas
                         style={{ ['--c' as string]: a.value }}
                         onClick={() => onChange({ accent: a.value })}
                         aria-label={a.name}
-                        title={a.name}
                       >
                         <Check strokeWidth={3} />
                       </button>
@@ -361,6 +382,59 @@ export function SettingsView({ settings: s, onChange, onBack, onShortcut, onToas
               <h3>Skipped folders</h3>
               <div className="group" style={s.fileSearch ? undefined : { opacity: 0.45, pointerEvents: 'none' }}>
                 <PathList items={s.excludeDirs} onChange={(v) => onChange({ excludeDirs: v })} placeholder="Folder name or path, e.g. node_modules" icon={FolderX} />
+              </div>
+            </>
+          )}
+
+          {page === 'clipboard' && (
+            <>
+              <h3>History</h3>
+              <div className="group">
+                <Switch
+                  title="Clipboard history"
+                  hint={info ? `Type “;” to search and paste. ${info.clipboardItems.toLocaleString()} item${info.clipboardItems === 1 ? '' : 's'} saved.` : 'Type “;” to search and paste.'}
+                  on={s.clipboardEnabled}
+                  onChange={(v) => onChange({ clipboardEnabled: v })}
+                />
+                <Switch
+                  title="Pause recording"
+                  hint="Stop saving new copies for now. Existing history stays searchable."
+                  on={s.clipboardPaused}
+                  onChange={(v) => onChange({ clipboardPaused: v })}
+                  disabled={!s.clipboardEnabled}
+                />
+                <Field title="History size" hint="Older clips drop off. Pinned clips are always kept." disabled={!s.clipboardEnabled}>
+                  <select className="select" value={s.clipboardMax} onChange={(e) => onChange({ clipboardMax: Number(e.target.value) })}>
+                    {[...new Set([...CLIP_SIZES, s.clipboardMax])]
+                      .sort((a, b) => a - b)
+                      .map((n) => (
+                        <option key={n} value={n}>
+                          {n.toLocaleString()} items
+                        </option>
+                      ))}
+                  </select>
+                </Field>
+              </div>
+
+              <h3>Privacy</h3>
+              <div className="group">
+                <Switch
+                  title="Keep history after restart"
+                  hint="Saved in Lumen’s settings folder, readable only by you. Off keeps it in memory only."
+                  on={s.clipboardPersist}
+                  onChange={(v) => onChange({ clipboardPersist: v })}
+                />
+                <Switch
+                  title="Skip passwords"
+                  hint="Ignore copies that password managers mark as secret."
+                  on={s.clipboardIgnoreSecrets}
+                  onChange={(v) => onChange({ clipboardIgnoreSecrets: v })}
+                />
+                <Field title="Clear history" hint={confirmClear ? 'Click again to clear. Pinned clips stay.' : 'Forget everything except pinned clips.'}>
+                  <button className={`btn small${confirmClear ? ' primary' : ''}`} onClick={clearClips}>
+                    <Trash2 /> {confirmClear ? 'Confirm' : 'Clear'}
+                  </button>
+                </Field>
               </div>
             </>
           )}

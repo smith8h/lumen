@@ -95,6 +95,13 @@ function useAutoHeight<T extends HTMLElement>(): [React.RefObject<T | null>, num
   return [ref, height]
 }
 
+/** The search field's invitation, by time of day. */
+function greeting(): string {
+  const h = new Date().getHours()
+  const part = h < 5 ? 'Still up' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
+  return `${part}. What do you need?`
+}
+
 function primaryAction(item: ResultItem): SecondaryAction {
   const labels: Record<ResultItem['kind'], string> = {
     app: 'Open',
@@ -105,9 +112,16 @@ function primaryAction(item: ResultItem): SecondaryAction {
     web: 'Search',
     command: item.action.type === 'run-command' && item.action.mode === 'inline' ? 'Run and show output' : 'Run in terminal',
     system: 'Run',
-    lumen: 'Open'
+    lumen: item.action.type === 'clip-clear' ? 'Run' : 'Open',
+    clip: 'Paste'
   }
-  return { label: labels[item.kind], hint: 'Enter', action: item.action }
+  return { label: labels[item.kind], hint: 'Enter', action: item.action, glyph: item.kind === 'clip' ? 'paste' : undefined }
+}
+
+/** "Ctrl+Shift+P" for a key event, matching SecondaryAction hints. */
+function comboOf(e: KeyboardEvent): string {
+  const key = e.key.length === 1 ? e.key.toUpperCase() : e.key
+  return [e.ctrlKey || e.metaKey ? 'Ctrl' : '', e.altKey ? 'Alt' : '', e.shiftKey ? 'Shift' : '', key].filter(Boolean).join('+')
 }
 
 export function App() {
@@ -123,6 +137,11 @@ export function App() {
   const [toast, setToast] = useState<{ text: string; error?: boolean; id: number } | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [run, setRun] = useState<RunState | null>(null)
+  const [placeholder, setPlaceholder] = useState(greeting)
+  /** Bumped to re-run the search in place (after pinning or deleting a clip). */
+  const [refresh, setRefresh] = useState(0)
+  /** After an in-place refresh, re-select this result (or the same row if it's gone). */
+  const keepSelection = useRef<string | null>(null)
   const input = useRef<HTMLInputElement>(null)
   const seq = useRef(0)
   const previewCache = useRef(new Map<string, Preview>())
@@ -142,6 +161,7 @@ export function App() {
       api.onSettings(setSettings),
       api.onShow((opts) => {
         setOpen(true)
+        setPlaceholder(greeting())
         resetPointer()
         setMenu(null)
         setConfirmId(null)
@@ -151,6 +171,8 @@ export function App() {
         setView(opts.view ?? 'search')
         setRun((r) => (r && r.done ? null : r))
         if (typeof opts.query === 'string') setQuery(opts.query)
+        // Re-run a kept query: results like clipboard history may have changed while hidden.
+        setRefresh((n) => n + 1)
         requestAnimationFrame(() => {
           input.current?.focus()
           input.current?.select()
@@ -181,6 +203,8 @@ export function App() {
   // ── Search ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const id = ++seq.current
+    const keep = keepSelection.current
+    keepSelection.current = null
     setConfirmId(null)
     setMenu(null)
     if (!query.trim()) {
@@ -191,9 +215,11 @@ export function App() {
     api.search(query, id).then((r) => {
       if (r.seq !== seq.current) return
       setResponse(r)
-      setSelected(0)
+      const all = r.sections.flatMap((s) => s.items)
+      const same = keep ? all.findIndex((i) => i.id === keep) : -1
+      setSelected((s) => (same >= 0 ? same : keep ? Math.max(0, Math.min(s, all.length - 1)) : 0))
     })
-  }, [query])
+  }, [query, refresh])
 
   const sections = query.trim() ? (response?.sections ?? []) : suggested
   const items = useMemo(() => sections.flatMap((s) => s.items), [sections])
@@ -241,6 +267,11 @@ export function App() {
       if (res.view) {
         setView(res.view)
         return
+      }
+      if (res.refresh) {
+        previewCache.current.clear()
+        keepSelection.current = item.id
+        setRefresh((n) => n + 1)
       }
       if (res.runId && action.type === 'run-command') {
         setRun({ runId: res.runId, command: action.command, chunks: [], done: false, exitCode: null, startedAt: Date.now() })
@@ -334,6 +365,17 @@ export function App() {
           setMenu(null)
         }
         return
+      }
+
+      // Result-specific shortcuts, e.g. Ctrl+Shift+P to pin a clip (Ctrl+Enter is handled below).
+      if (ctrl && current?.actions?.length) {
+        const combo = comboOf(e)
+        const hit = current.actions.find((a) => a.hint && a.hint !== 'Ctrl+Enter' && a.hint === combo)
+        if (hit) {
+          e.preventDefault()
+          perform(current, hit.action)
+          return
+        }
       }
 
       const goTo = (index: number) => {
@@ -435,6 +477,8 @@ export function App() {
             ? [['Enter', 'Run'], ['Ctrl+K', 'Actions']]
             : current.kind === 'calc'
               ? [['Enter', 'Copy']]
+              : current.kind === 'clip'
+                ? [['Enter', 'Paste'], ['Ctrl+Enter', 'Copy'], ['Ctrl+K', 'Actions']]
               : menuActions.length > 1
                 ? [['Enter', primaryAction(current).label], ['Ctrl+K', 'Actions']]
                 : [['Enter', primaryAction(current).label]]
@@ -457,7 +501,8 @@ export function App() {
                 value={query}
                 autoFocus
                 spellCheck={false}
-                placeholder="Search apps, files and the web…"
+                placeholder={placeholder}
+                aria-label="Search apps, files and the web"
                 onChange={(e) => setQuery(e.target.value)}
               />
               {mode && (
@@ -465,7 +510,7 @@ export function App() {
                   {ModeGlyph && <ModeGlyph size={13} />} {mode.label}
                 </span>
               )}
-              <button className="icon-btn" onClick={() => setView('settings')} aria-label="Settings" title="Settings (Ctrl+,)">
+              <button className="icon-btn" onClick={() => setView('settings')} aria-label="Settings (Ctrl+,)">
                 <Settings2 size={18} />
               </button>
             </div>
@@ -486,11 +531,15 @@ export function App() {
                 </span>
               ) : (
                 <>
-                  <LumenMark size={16} /> Lumen
-                  {query.trim() && response && !run && (
+                  <LumenMark size={16} />
+                  {query.trim() && response && !run ? (
                     <span className="status">
-                      · {items.length} result{items.length === 1 ? '' : 's'} in {response.tookMs}ms
+                      {items.length} result{items.length === 1 ? '' : 's'} in {response.tookMs} ms
                     </span>
+                  ) : !query.trim() && current ? (
+                    <span className="status current">{current.title}</span>
+                  ) : (
+                    'Lumen'
                   )}
                 </>
               )}

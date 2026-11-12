@@ -13,7 +13,8 @@ const KIND_LABEL: Record<ResultItem['kind'], string> = {
   web: 'Search',
   command: 'Run',
   system: 'Run',
-  lumen: 'Open'
+  lumen: 'Open',
+  clip: 'Paste'
 }
 
 interface Props {

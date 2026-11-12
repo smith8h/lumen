@@ -6,6 +6,11 @@
 //     CSS pixels, so the extension can blur exactly that area. All zeros = panel closed.
 //   • property ShellBlur (read/write bool): the extension sets it while it draws real blur,
 //     and Lumen makes its own tint more see-through.
+//   • method PreviousWindow(wm_class, is_x11): when the panel takes focus, the extension says
+//     which window had it before, so pasting a clip into a terminal uses Ctrl+Shift+V and
+//     an XWayland window can be reached with xdotool.
+//   • method ClipboardSecret(): a copy was tagged as a secret by a password manager
+//     (x-kde-passwordManagerHint), so clipboard history skips it. Never carries the text.
 import dbus from 'dbus-next'
 import type { PanelRect } from '@shared/types'
 import { DBUS_IFACE, DBUS_NAME, DBUS_PATH } from '@shared/constants'
@@ -20,6 +25,10 @@ export interface DbusHandlers {
   key?(combo: string): void
   /** The GNOME extension started or stopped drawing real blur behind the panel. */
   shellBlurChanged(enabled: boolean): void
+  /** The GNOME extension reports the window that had focus before the panel. */
+  previousWindow(wmClass: string, x11: boolean): void
+  /** The GNOME extension saw a copy marked as a secret. */
+  clipboardSecret(): void
 }
 
 type Service = { PanelGeometry(rect: PanelRect | null): void }
@@ -74,6 +83,12 @@ export async function startDbus(h: DbusHandlers): Promise<boolean> {
       Hide(): void {
         h.hide()
       }
+      ClipboardSecret(): void {
+        h.clipboardSecret()
+      }
+      PreviousWindow(wmClass: string, x11: boolean): void {
+        if (typeof wmClass === 'string' && wmClass.length <= 256) h.previousWindow(wmClass, !!x11)
+      }
       Key(combo: string): void {
         if (!h.key) throw new Error('Key is only available in development builds')
         h.key(combo)
@@ -88,6 +103,8 @@ export async function startDbus(h: DbusHandlers): Promise<boolean> {
         Toggle: { inSignature: '', outSignature: '' },
         Show: { inSignature: 's', outSignature: '' },
         Hide: { inSignature: '', outSignature: '' },
+        PreviousWindow: { inSignature: 'sb', outSignature: '' },
+        ClipboardSecret: { inSignature: '', outSignature: '' },
         Capture: { inSignature: 's', outSignature: '' },
         Key: { inSignature: 's', outSignature: '' }
       },

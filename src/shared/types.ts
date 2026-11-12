@@ -10,6 +10,7 @@ export type ResultKind =
   | 'command'
   | 'system'
   | 'lumen'
+  | 'clip'
 
 /** How an icon should be drawn. `file` icons are served through the lumen-icon:// protocol. */
 export type IconSpec =
@@ -39,6 +40,9 @@ export type GlyphName =
   | 'sparkles'
   | 'copy'
   | 'keyboard'
+  | 'clipboard'
+  | 'pin'
+  | 'paste'
 
 /** Everything the main process can do on behalf of a result. Validated in main before running. */
 export type Action =
@@ -51,6 +55,12 @@ export type Action =
   | { type: 'run-command'; command: string; mode: 'terminal' | 'inline' }
   | { type: 'system'; op: SystemOp }
   | { type: 'lumen'; op: 'settings' | 'quit' | 'reindex' | 'shortcut' }
+  // Clipboard history. The renderer only ever sends ids; the text stays in the main process.
+  | { type: 'clip-paste'; id: string; /** Send Ctrl+Shift+V instead of Ctrl+V. */ terminal?: boolean }
+  | { type: 'clip-copy'; id: string }
+  | { type: 'clip-pin'; id: string; pinned: boolean }
+  | { type: 'clip-delete'; id: string }
+  | { type: 'clip-clear' }
 
 export type SystemOp =
   | 'lock'
@@ -91,7 +101,7 @@ export interface ResultItem {
   historyKey?: string
 }
 
-export type SectionId = 'top' | 'calc' | 'apps' | 'commands' | 'files' | 'folders' | 'web' | 'system'
+export type SectionId = 'top' | 'calc' | 'clipboard' | 'apps' | 'commands' | 'files' | 'folders' | 'web' | 'system'
 
 export interface ResultSection {
   id: SectionId
@@ -115,6 +125,7 @@ export type Preview =
   | { type: 'folder'; path: string; name: string; modified: number; entries: { name: string; dir: boolean }[]; total: number }
   | { type: 'file'; path: string; name: string; size: number; modified: number; mime?: string; icon?: IconSpec }
   | { type: 'calc'; expression: string; result: string; detail?: string }
+  | { type: 'clip'; text: string; truncated: boolean; length: number; lines: number; firstAt: number; lastAt: number; pinned: boolean }
   | { type: 'none' }
 
 export interface ExecuteResult {
@@ -127,6 +138,8 @@ export interface ExecuteResult {
   /** Switch the panel to another view. */
   view?: 'settings' | 'shortcut'
   toast?: string
+  /** Re-run the current search in place, keeping the selection (e.g. after pinning a clip). */
+  refresh?: boolean
 }
 
 export interface CommandOutputEvent {
@@ -155,6 +168,16 @@ export interface Settings {
   currencyConversion: boolean
   /** Unload the panel's page after it has been hidden for a while. */
   freeMemoryWhenIdle: boolean
+  /** Remember text you copy, searchable with ";". */
+  clipboardEnabled: boolean
+  /** Keep clipboard history on disk across restarts. */
+  clipboardPersist: boolean
+  /** How many clips to keep (pinned clips are never dropped). */
+  clipboardMax: number
+  /** Skip copies that password managers mark as secret. */
+  clipboardIgnoreSecrets: boolean
+  /** Temporarily stop recording without turning history off. */
+  clipboardPaused: boolean
   firstRunDone: boolean
 }
 
@@ -174,6 +197,7 @@ export interface AppInfo {
   desktop: string
   indexedFiles: number
   indexedApps: number
+  clipboardItems: number
   home: string
 }
 

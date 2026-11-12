@@ -14,15 +14,15 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Mtk from 'gi://Mtk';
 
-/** Blur strength (gaussian sigma, in logical pixels). Matches the panel's CSS blur(40px) look. */
-const SIGMA = 30;
+/** Blur strength (gaussian sigma, in logical pixels). Strong enough that text behind the panel turns to soft colour. */
+const SIGMA = 56;
 /** Extra saturation, like `backdrop-filter: saturate()`. 1 = unchanged. */
-const SATURATION = 1.45;
+const SATURATION = 1.6;
 /**
  * The actor reaches this far past the panel on every side, so the blur samples real
  * pixels at the panel's edges instead of smearing its own border.
  */
-export const MARGIN = 48;
+export const MARGIN = 96;
 
 // Firefox/GNOME-style downscaling: blur a smaller copy when the radius is large.
 const MAX_SIGMA = 6;

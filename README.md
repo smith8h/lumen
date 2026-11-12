@@ -25,6 +25,7 @@ Press <kbd>Alt</kbd> + <kbd>Space</kbd> to find apps, files and folders, run ter
 - **Terminal.** `> htop` opens in your terminal; `> ls -la` runs right in the panel and streams the output. Ctrl+Enter sends any command to a real terminal.
 - **Calculator.** `2^10`, `sqrt(2) * pi`, `15% of 80`, unit conversion (`5 km to mi`, `30 c to f`, `5 GB to MB`) and currency (`100 usd to iqd`).
 - **Web.** URLs open directly in your default browser (Brave, Firefox, Chrome…). Anything else can be searched, with shortcuts like `yt`, `gh`, `wiki`, `maps`, `npm`, `so` and `tr`.
+- **Clipboard history.** `;` lists text you copied in any app, newest first; type to search it, Enter pastes into the app you were using, Ctrl+Enter just copies. Pin clips you reuse. History stays on this computer (a `0600` file, or memory only), skips password-manager secrets with the GNOME extension, and can be paused or turned off.
 - **System.** Lock, sleep, log out, restart, shut down, dark/light mode, Wi-Fi, Do Not Disturb, empty Trash. Destructive actions ask for a second Enter.
 - **Learns from you.** Frecency ranking puts what you open most at the top, and the start screen shows your favourite apps and recent files.
 - **Feels native.** Glass design with a light/dark theme, accent colours, smooth spring animations, a sliding selection, full keyboard control and an actions menu (Ctrl+K).
@@ -113,6 +114,7 @@ To remove it: `gnome-extensions uninstall lumen@lumenlauncher.github.io`.
 | <kbd>Enter</kbd> | Open, run or copy the selected result |
 | <kbd>Ctrl</kbd>+<kbd>Enter</kbd> | Show a file in Files · run a command in the terminal |
 | <kbd>Ctrl</kbd>+<kbd>K</kbd> or <kbd>Tab</kbd> | More actions (copy path, open terminal here, app actions…) |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> · <kbd>Ctrl</kbd>+<kbd>D</kbd> | Pin · delete the selected clip (in `;` mode) |
 | <kbd>Ctrl</kbd>+<kbd>,</kbd> | Settings |
 | <kbd>Esc</kbd> | Clear the search, then close |
 | Click outside | Close |
@@ -122,6 +124,7 @@ To remove it: `gnome-extensions uninstall lumen@lumenlauncher.github.io`.
 | `> command` | Run a shell command (inline output, or in your terminal) |
 | `= expression` | Force calculator mode |
 | `? query` | Search the web |
+| `; text` | Search clipboard history, Enter pastes |
 | `~/` or `/` | Browse folders |
 | `yt` `gh` `wiki` `maps` `npm` `so` `tr` `img` `reddit` `mdn` + text | Search that site |
 | `github.com`, `localhost:3000`, `192.168.1.1` | Open in your browser |
@@ -213,10 +216,11 @@ To rebuild an existing release, run the workflow by hand from the **Actions** ta
 - GNOME doesn't give apps real background blur, so without the [GNOME extension](#gnome-extension-for-real-blur-optional) the glass is a frosted tint. Lower *Glass opacity* in Settings for a more see-through look. Other desktops get the tint only.
 - On Wayland without the extension, Lumen's window shows up in the dock and Alt+Tab while the panel is open.
 - Automatic shortcut setup covers GNOME. Other desktops may need the one-time manual binding above.
+- Pasting a clip presses Ctrl+V for you with [`ydotool`](https://github.com/ReimuNotMoe/ydotool) (needs its `ydotoold` service running) on Wayland, or `xdotool` on X11. Without them, Lumen copies the clip and asks you to press Ctrl+V. Clipboard history is text only for now.
 
 ## Roadmap
 
-- Clipboard history and emoji picker
+- Emoji picker; images in clipboard history
 - Plugin API for custom providers
 - Flatpak and AUR packages
 
