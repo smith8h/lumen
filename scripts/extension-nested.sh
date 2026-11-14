@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Try the GNOME extension without logging out: starts a nested GNOME Shell with only the
-# Lumen extension enabled, then runs Lumen (hot-reloading dev build) inside it.
+# Lumen extension enabled, then runs the debug build of Lumen inside it.
 #
-#   npm run extension:nested              # nested shell in a window (needs mutter-devkit)
-#   npm run extension:nested -- --headless   # no window; drive it over D-Bus (CI / scripts)
+#   scripts/extension-nested.sh              # nested shell in a window (needs mutter-devkit)
+#   scripts/extension-nested.sh --headless   # no window; drive it over D-Bus (CI / scripts)
 #
 # Everything is isolated: its own D-Bus session, Wayland display, GSettings (a keyfile in a
 # temp folder) and Lumen profile, so your real session, settings and shortcut are untouched.
@@ -11,6 +11,7 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
+cargo build --manifest-path "$ROOT/Cargo.toml"
 UUID=$(sed -n 's/.*"uuid": *"\([^"]*\)".*/\1/p' "$ROOT/gnome-extension/metadata.json")
 DISPLAY_NAME=lumen-nested-0
 TMP=$(mktemp -d -t lumen-nested-XXXXXX)
@@ -50,7 +51,7 @@ dbus-run-session -- bash -c '
   cd "$LUMEN_ROOT"
   env -u DISPLAY WAYLAND_DISPLAY="$LUMEN_NESTED_DISPLAY" XDG_SESSION_TYPE=wayland \
     XDG_DATA_HOME="$LUMEN_REAL_DATA_HOME" XDG_CONFIG_HOME="$LUMEN_REAL_CONFIG_HOME" \
-    LUMEN_USER_DATA="$LUMEN_NESTED_TMP/lumen" npx electron-vite dev &
+    LUMEN_USER_DATA="$LUMEN_NESTED_TMP/lumen" GSETTINGS_BACKEND=memory "$LUMEN_ROOT/target/debug/lumen" &
   lumen=$!
   wait "$shell" || true
   kill "$lumen" 2>/dev/null || true

@@ -1,0 +1,926 @@
+/*
+ * Lumen design system: "Lit glass".
+ *
+ * Lumen is a lens: a pane of frosted glass that light passes through.
+ *   • Glass first: one frosted panel. Everything inside is a thinner layer of it.
+ *   • Light marks focus: the selected thing is the brightest pane, lit from its left edge by the
+ *     accent. The accent is light, never paint: no large accent-coloured fills.
+ *   • Quiet chrome: hairlines and spacing separate things; no boxes around boxes.
+ *   • Motion answers the user: the panel arrives, the light slides to the selection.
+ *
+ * Tokens (dollar names) are filled in by theme.rs for the current theme and accent.
+ * Space: 2 4 6 8 10 12 16 20 24 32 · Radius: xs 6, sm 8, md 10, row 12, lg 16, xl 18, panel 26
+ * Type: xs 11.5, sm 12.5, md 13.5, base 14.5, lg 16, xl 18, 2xl 23, 3xl 28, display 40
+ */
+
+window.lumen,
+window.lumen > * {
+  background: none;
+  box-shadow: none;
+  border: none;
+}
+
+.lumen,
+.lumen popover {
+  font-family: "Instrument Sans", "Inter Variable", "Inter", "Cantarell", sans-serif;
+  font-size: 14.5px;
+  color: $text;
+}
+
+.lumen label selection,
+.lumen text selection {
+  background-color: $accent_selection;
+  color: $text;
+}
+
+/* ── Panel ─────────────────────────────────────────────────────────────── */
+.panel {
+  border-radius: 26px;
+  background-color: $glass_bg;
+  background-image:
+    radial-gradient(ellipse 560px 200px at 6% -14%, $glow_1, transparent 72%),
+    radial-gradient(ellipse 480px 240px at 104% 120%, $glow_2, transparent 70%),
+    linear-gradient(180deg, $glass_sheen, transparent 28%);
+  box-shadow:
+    0 48px 110px -28px $shadow_1,
+    0 18px 44px -18px $shadow_2,
+    0 0 0 1px $shadow_3,
+    inset 0 1px $glass_edge,
+    inset 0 0 0 1px $glass_rim;
+  opacity: 0;
+  transition: opacity 110ms cubic-bezier(0.55, 0, 1, 0.45);
+}
+.panel.open {
+  opacity: 1;
+  transition: opacity 170ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Search bar ─────────────────────────────────────────────────────────── */
+.searchbar {
+  min-height: 68px;
+  padding: 0 12px 0 22px;
+}
+.searchbar .lead {
+  color: $text_3;
+  transition: color 170ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.searchbar .lead.active {
+  color: $accent_strong;
+}
+.searchbar text.search {
+  font-size: 23px;
+  letter-spacing: -0.4px;
+  caret-color: $accent;
+  background: none;
+  color: $text;
+  min-height: 68px;
+}
+.searchbar text.search placeholder {
+  color: $text_4;
+}
+
+.chip {
+  min-height: 26px;
+  padding: 0 10px 0 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: $accent_strong;
+  background-color: $accent_soft;
+  box-shadow: inset 0 0 0 1px $accent_stroke;
+  animation: pop 260ms cubic-bezier(0.34, 1.36, 0.64, 1);
+}
+
+button.icon-btn {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  box-shadow: none;
+  color: $text_3;
+  transition: background-color 110ms, color 110ms;
+}
+button.icon-btn:hover {
+  background-color: $fill_2;
+  color: $text;
+}
+
+.divider {
+  min-height: 1px;
+  margin: 0 16px;
+  background-color: $stroke_hairline;
+  transition: opacity 170ms;
+}
+.divider.hidden {
+  opacity: 0;
+}
+
+/* ── Results ────────────────────────────────────────────────────────────── */
+scrolledwindow.results > viewport,
+scrolledwindow.scroll > viewport {
+  background: none;
+}
+.results-content {
+  padding: 6px 8px 8px;
+}
+scrollbar {
+  background: none;
+  border: none;
+}
+scrollbar slider {
+  min-width: 4px;
+  border-radius: 10px;
+  background-color: $fill_3;
+  border: 3px solid transparent;
+}
+
+.section-title {
+  padding: 12px 12px 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: $text_3;
+}
+
+/* The lit pane that slides to the selected row. */
+.selection {
+  border-radius: 12px;
+  background-color: $lit_bg;
+  box-shadow: inset 0 1px $lit_edge, inset 0 0 0 1px $stroke, 0 8px 22px -14px $shadow_row;
+}
+/* The light: a short glowing strip at the lit pane's left edge. */
+.light {
+  min-width: 3px;
+  border-radius: 0 999px 999px 0;
+  background-image: linear-gradient(180deg, $accent_light, $accent);
+  box-shadow: 0 0 10px 1px $accent_glow;
+}
+.light.bottom {
+  min-width: 0;
+  min-height: 3px;
+  border-radius: 999px 999px 0 0;
+}
+
+.row {
+  min-height: 46px;
+  padding: 0 12px;
+  border-radius: 12px;
+  transition: background-color 110ms;
+}
+.row.top {
+  min-height: 58px;
+}
+.row:hover:not(.selected) {
+  background-color: $fill_1;
+}
+.row .title {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: $text_soft;
+}
+.row.top .title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+.row.selected .title,
+.row .title.has-matches {
+  color: $text;
+}
+.row.calc .title {
+  font-size: 18px;
+  font-weight: 600;
+  font-feature-settings: "tnum";
+  color: $text;
+}
+.row .subtitle {
+  font-size: 11.5px;
+  color: $text_3;
+}
+.row.selected .subtitle {
+  color: $text_2;
+}
+.row .trail {
+  font-size: 11.5px;
+  color: $text_3;
+  opacity: 0;
+  transition: opacity 110ms;
+}
+.row.selected .trail {
+  opacity: 1;
+}
+
+/* ── Icons ──────────────────────────────────────────────────────────────── */
+image.app-icon {
+  -gtk-icon-shadow: 0 2px 5px $shadow_icon;
+}
+picture.thumb {
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px $stroke;
+}
+.tile {
+  border-radius: 9px;
+  color: white;
+}
+.tile.big {
+  border-radius: 21px;
+}
+.tile.huge {
+  border-radius: 13px;
+}
+
+/* ── Keycaps ────────────────────────────────────────────────────────────── */
+.kbd {
+  min-width: 10px;
+  min-height: 20px;
+  padding: 0 5px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: $text_2;
+  background-color: $kbd_fill;
+  box-shadow: inset 0 0 0 1px $kbd_stroke, 0 1px $kbd_stroke;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.footer {
+  min-height: 42px;
+  padding: 0 12px 0 16px;
+  border-top: 1px solid $stroke_hairline;
+  background-image: linear-gradient(180deg, transparent, $fill_1);
+  font-size: 11.5px;
+  color: $text_3;
+}
+.footer .brand {
+  font-weight: 600;
+  color: $text_2;
+}
+.footer .status {
+  font-weight: 400;
+  color: $text_3;
+}
+.footer .status.current {
+  font-weight: 500;
+  color: $text_2;
+}
+.footer .confirm-bar {
+  color: $danger;
+  font-weight: 500;
+  animation: fade-in 170ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Preview pane ───────────────────────────────────────────────────────── */
+.preview {
+  border-left: 1px solid $stroke_hairline;
+  padding: 18px;
+  animation: fade-in 170ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.preview .hero-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+.preview .hero-text {
+  font-size: 12.5px;
+  color: $text_2;
+}
+.preview .mono {
+  font-family: "JetBrains Mono", "Source Code Pro", "DejaVu Sans Mono", monospace;
+}
+.preview .chips label {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background-color: $fill_2;
+  color: $text_2;
+}
+.preview .meta {
+  border-top: 1px solid $stroke_hairline;
+  padding-top: 12px;
+  font-size: 11.5px;
+}
+.preview .meta .key {
+  color: $text_3;
+}
+.preview .meta .value {
+  color: $text_2;
+}
+.preview .image {
+  border-radius: 16px;
+  background-color: $fill_1;
+}
+.preview .code {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background-color: $fill_inset;
+  box-shadow: inset 0 0 0 1px $stroke_hairline;
+  font-family: "JetBrains Mono", "Source Code Pro", "DejaVu Sans Mono", monospace;
+  font-size: 11.5px;
+  color: $text_2;
+}
+.preview .code .more {
+  color: $text_3;
+  font-style: italic;
+}
+.preview .actions-list .action-chip {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: $text_2;
+  background-color: $fill_1;
+}
+.preview .entry {
+  padding: 4px 6px;
+  font-size: 12.5px;
+  color: $text_2;
+}
+.preview .entry .glyph-dim {
+  color: $text_3;
+}
+.preview .calc-result {
+  font-size: 40px;
+  font-weight: 500;
+  letter-spacing: -1.2px;
+  font-feature-settings: "tnum";
+  color: $accent_result;
+}
+.preview .detail {
+  font-size: 12px;
+  color: $text_3;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+button.btn {
+  min-height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: $text;
+  background-color: $fill_2;
+  background-image: none;
+  box-shadow: inset 0 0 0 1px $stroke;
+  transition: background-color 110ms, box-shadow 110ms;
+}
+button.btn:hover {
+  background-color: $fill_3;
+}
+button.btn:disabled {
+  opacity: 0.5;
+}
+button.btn.primary {
+  color: $on_accent;
+  background-image: linear-gradient(180deg, $accent_top, $accent);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.28), 0 8px 22px -12px $accent, 0 0 0 1px $accent_dark;
+}
+button.btn.primary:hover {
+  background-image: linear-gradient(180deg, $accent_light, $accent_top);
+}
+button.btn.ghost {
+  background: none;
+  box-shadow: none;
+  color: $text_2;
+}
+button.btn.ghost:hover {
+  background-color: $fill_2;
+  color: $text;
+}
+button.btn.small {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  border-radius: 8px;
+}
+button.btn:focus-visible,
+button.icon-btn:focus-visible,
+button.nav-item:focus-visible,
+button.tip:focus-visible {
+  outline: 1px solid $accent;
+  outline-offset: 1px;
+}
+
+/* ── Suggestions (empty query) ─────────────────────────────────────────── */
+.suggest {
+  padding: 6px 8px 8px;
+}
+.tile-app {
+  padding: 14px 4px 10px;
+  border-radius: 16px;
+  transition: background-color 110ms, box-shadow 110ms;
+}
+.tile-app label {
+  font-size: 11.5px;
+  color: $text_2;
+}
+.tile-app:hover {
+  background-color: $fill_1;
+}
+.tile-app.selected {
+  background-color: $lit_bg;
+  box-shadow: inset 0 1px $lit_edge, inset 0 0 0 1px $stroke, 0 8px 22px -14px $shadow_row;
+}
+.tile-app.selected label {
+  color: $text;
+}
+.tips {
+  margin-top: 4px;
+  padding: 10px 8px 4px;
+  border-top: 1px solid $stroke_hairline;
+  font-size: 12.5px;
+  color: $text_3;
+}
+button.tip {
+  min-height: 28px;
+  padding: 0 10px 0 6px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: $text_2;
+  transition: background-color 110ms, color 110ms;
+}
+button.tip:hover {
+  background-color: $fill_2;
+  color: $text;
+}
+.tip .code,
+.code-chip {
+  min-width: 12px;
+  min-height: 20px;
+  padding: 0 5px;
+  border-radius: 6px;
+  font-family: "JetBrains Mono", "Source Code Pro", "DejaVu Sans Mono", monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: $accent_strong;
+  background-color: $accent_soft;
+  box-shadow: inset 0 0 0 1px $accent_stroke;
+}
+
+.empty {
+  padding: 34px 20px 38px;
+  color: $text_3;
+  font-size: 13.5px;
+}
+
+/* ── Action menu (Ctrl+K) ──────────────────────────────────────────────── */
+.action-menu {
+  margin: 0 12px 50px 0;
+  padding: 6px;
+  border-radius: 18px;
+  background-color: $glass_solid;
+  box-shadow: 0 24px 60px -18px $shadow_4, 0 0 0 1px $shadow_3, inset 0 0 0 1px $stroke, inset 0 1px $glass_edge;
+  animation: fade-in 170ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.action-menu .menu-title {
+  padding: 6px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: $text_3;
+}
+.action-menu .item {
+  min-height: 34px;
+  padding: 0 10px 0 0;
+  border-radius: 10px;
+  font-size: 13.5px;
+  color: $text_2;
+}
+.action-menu .item.selected {
+  background-color: $lit_bg;
+  box-shadow: inset 0 1px $lit_edge, inset 0 0 0 1px $stroke, 0 8px 22px -14px $shadow_row;
+  color: $text;
+}
+
+/* ── Toast ──────────────────────────────────────────────────────────────── */
+.toast {
+  margin-bottom: 52px;
+  min-height: 34px;
+  padding: 0 14px 0 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 500;
+  background-color: $glass_solid;
+  box-shadow: 0 24px 60px -18px $shadow_4, 0 0 0 1px $shadow_3, inset 0 0 0 1px $stroke;
+  animation: toast-in 260ms cubic-bezier(0.34, 1.36, 0.64, 1);
+}
+.toast .ok {
+  color: $success;
+}
+.toast .err {
+  color: $danger;
+}
+
+/* ── Command output ─────────────────────────────────────────────────────── */
+.output {
+  padding: 10px 14px 12px;
+}
+.output .cmd {
+  font-family: "JetBrains Mono", "Source Code Pro", "DejaVu Sans Mono", monospace;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.output .prompt {
+  color: $accent_strong;
+}
+.status-pill {
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background-color: $fill_2;
+  color: $text_2;
+}
+.status-pill.ok {
+  color: $success;
+  background-color: $success_soft;
+}
+.status-pill.fail {
+  color: $danger;
+  background-color: $danger_soft;
+}
+.output .console {
+  border-radius: 16px;
+  background-color: $fill_inset;
+  box-shadow: inset 0 0 0 1px $stroke_hairline;
+}
+.output textview,
+.output textview text {
+  background: none;
+  color: $text;
+  font-family: "JetBrains Mono", "Source Code Pro", "DejaVu Sans Mono", monospace;
+  font-size: 11.5px;
+}
+.output textview {
+  padding: 12px 14px;
+}
+
+/* ── Form controls (settings, onboarding) ──────────────────────────────── */
+.segmented {
+  padding: 3px;
+  border-radius: 10px;
+  background-color: $fill_1;
+  box-shadow: inset 0 0 0 1px $stroke_hairline;
+}
+.segmented button {
+  min-height: 26px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: $text_2;
+  transition: background-color 110ms, color 110ms;
+}
+.segmented button:hover {
+  color: $text;
+}
+.segmented button.on {
+  background-color: $fill_3;
+  color: $text;
+  box-shadow: 0 1px 2px $shadow_control, inset 0 0 0 1px $stroke;
+}
+
+button.swatch {
+  min-width: 22px;
+  min-height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  color: white;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+button.swatch.on {
+  box-shadow: 0 0 0 2px $glass_tint, 0 0 0 4px currentColor;
+}
+
+switch {
+  min-width: 38px;
+  min-height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background-color: $fill_3;
+  box-shadow: inset 0 0 0 1px $stroke_hairline;
+  transition: background-color 170ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+switch:checked {
+  background-color: $accent;
+  box-shadow: inset 0 0 0 1px $accent_dark;
+}
+switch slider {
+  min-width: 18px;
+  min-height: 18px;
+  margin: 2px;
+  border: none;
+  border-radius: 999px;
+  background-color: white;
+  background-image: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+switch image {
+  color: transparent;
+}
+
+dropdown.select > button,
+entry.text-input {
+  min-height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background-color: $fill_2;
+  background-image: none;
+  box-shadow: inset 0 0 0 1px $stroke;
+  font-size: 12.5px;
+  color: $text;
+  outline: none;
+}
+dropdown.select > button {
+  min-width: 130px;
+}
+entry.text-input:focus-within {
+  box-shadow: 0 0 0 1px $accent, 0 0 0 4px $accent_soft;
+}
+entry.text-input placeholder {
+  color: $text_4;
+}
+entry.text-input.mono {
+  font-family: "JetBrains Mono", "Source Code Pro", "DejaVu Sans Mono", monospace;
+  font-size: 11.5px;
+}
+.lumen popover > contents {
+  padding: 4px;
+  border-radius: 12px;
+  background-color: $glass_solid;
+  box-shadow: 0 12px 32px -12px $shadow_4, inset 0 0 0 1px $stroke;
+  color: $text;
+}
+.lumen popover > arrow {
+  background: none;
+  border: none;
+}
+.lumen popover listview,
+.lumen popover listview > row {
+  background: none;
+  color: $text;
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+.lumen popover listview > row:hover,
+.lumen popover listview > row:selected {
+  background-color: $fill_2;
+}
+
+/* ── Settings ──────────────────────────────────────────────────────────── */
+.settings-nav {
+  min-width: 196px;
+  padding: 12px 8px;
+  border-right: 1px solid $stroke_hairline;
+  background-image: linear-gradient(180deg, $fill_1, transparent);
+}
+.settings-nav .nav-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+button.nav-item {
+  min-height: 32px;
+  padding: 0 10px 0 0;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  box-shadow: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: $text_2;
+  transition: background-color 110ms, color 110ms;
+}
+button.nav-item .glyph {
+  color: $text_3;
+}
+button.nav-item:hover {
+  background-color: $fill_2;
+  color: $text;
+}
+button.nav-item.on {
+  background-color: $lit_bg;
+  box-shadow: inset 0 1px $lit_edge, inset 0 0 0 1px $stroke, 0 8px 22px -14px $shadow_row;
+  color: $text;
+}
+button.nav-item.on .glyph {
+  color: $accent_strong;
+}
+.settings-nav .nav-foot {
+  padding: 0 10px;
+  font-size: 11.5px;
+  color: $text_3;
+}
+.settings-page {
+  padding: 16px 20px 20px;
+  animation: page-in 170ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.settings-page .page-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+.settings-page .lede {
+  font-size: 12.5px;
+  color: $text_2;
+}
+.settings-page .group-title {
+  margin: 20px 4px 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: $text_3;
+}
+.settings-page .group-title.first {
+  margin-top: 12px;
+}
+.group {
+  border-radius: 16px;
+  background-color: $fill_1;
+  box-shadow: inset 0 0 0 1px $stroke_hairline;
+}
+.group.dimmed {
+  opacity: 0.45;
+}
+.field {
+  min-height: 52px;
+  padding: 10px 14px;
+}
+.field.separated,
+.path-list.separated {
+  border-top: 1px solid $stroke_hairline;
+}
+.field.disabled .label-box,
+.field.disabled .control {
+  opacity: 0.45;
+}
+.field .field-title {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.field .field-hint {
+  font-size: 11.5px;
+  color: $text_2;
+}
+.badge {
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background-color: $fill_2;
+  color: $text_2;
+}
+.badge.success {
+  color: $success;
+  background-color: $success_soft;
+}
+.path-list {
+  padding: 6px;
+}
+.path-row {
+  min-height: 34px;
+  padding: 0 4px 0 8px;
+  border-radius: 8px;
+  font-family: "JetBrains Mono", "Source Code Pro", "DejaVu Sans Mono", monospace;
+  font-size: 11.5px;
+  color: $text_2;
+}
+.path-row:hover {
+  background-color: $fill_1;
+}
+.path-row .glyph {
+  color: $text_3;
+}
+.path-row button {
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  color: $text_3;
+  opacity: 0;
+  transition: opacity 110ms, background-color 110ms, color 110ms;
+}
+.path-row:hover button {
+  opacity: 1;
+}
+.path-row button:hover {
+  background-color: $fill_3;
+  color: $danger;
+}
+.path-list .none {
+  padding: 8px;
+  font-size: 11.5px;
+  color: $text_3;
+}
+.about-title {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.8px;
+}
+.about-text {
+  font-size: 12.5px;
+  color: $text_2;
+}
+.stats .stat {
+  padding: 12px 14px;
+}
+.stats .stat.separated {
+  border-left: 1px solid $stroke_hairline;
+}
+.stats .stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  font-feature-settings: "tnum";
+}
+.stats .stat-label {
+  font-size: 11.5px;
+  color: $text_3;
+}
+
+/* ── Welcome ───────────────────────────────────────────────────────────── */
+.welcome {
+  padding: 26px 32px 24px;
+}
+.welcome .welcome-title {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.8px;
+}
+.welcome .welcome-text {
+  font-size: 13.5px;
+  color: $text_2;
+}
+.welcome .bigkey {
+  min-height: 40px;
+  min-width: 24px;
+  padding: 0 14px;
+  border-radius: 11px;
+  font-size: 16px;
+  color: $text;
+  background-color: $kbd_fill;
+  box-shadow: inset 0 0 0 1px $kbd_stroke, 0 3px $kbd_stroke, 0 8px 20px -8px $shadow_2;
+}
+.welcome .bigkey.space {
+  min-width: 122px;
+}
+.welcome .plus {
+  color: $text_3;
+}
+.welcome .status-line {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: $success;
+}
+.welcome .note {
+  font-size: 11.5px;
+  color: $text_3;
+}
+.welcome .manual-code {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background-color: $fill_2;
+  font-family: "JetBrains Mono", "Source Code Pro", "DejaVu Sans Mono", monospace;
+  font-size: 11px;
+}
+
+/* ── Motion ─────────────────────────────────────────────────────────────── */
+@keyframes pop {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Inside the start screen the suggestion list shares the outer padding. */
+.suggest .results-content {
+  padding: 0;
+}

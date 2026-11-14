@@ -20,7 +20,8 @@ concurrency:
 
 jobs:
   linux:
-    name: AppImage + .deb + GNOME extension
+    name: .deb + tarball + GNOME extension
+    # The oldest supported GTK (4.14) and glibc, so the binary runs on Ubuntu 24.04 and newer.
     runs-on: ubuntu-24.04
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
@@ -29,10 +30,11 @@ jobs:
         with:
           ref: ${{ env.TAG }}
 
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
+      - name: GTK 4 development files
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev zip
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
 
       - name: Use the release tag as the app version
         run: |
@@ -41,28 +43,40 @@ jobs:
             echo "::error::Release tag '$TAG' must look like v1.2.3"
             exit 1
           fi
-          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          sed -i "0,/^version = \".*\"/s//version = \"$VERSION\"/" Cargo.toml
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Type-check
-        run: npm run typecheck
+      - name: Test
+        run: cargo test --workspace
 
       - name: Build
-        run: npm run build
+        run: cargo build --release -p lumen
 
-      - name: Package AppImage and .deb
-        run: npx electron-builder --linux AppImage deb --publish never
+      - name: Package .deb
+        run: |
+          cargo install cargo-deb --locked
+          cargo deb -p lumen --no-build
+          mkdir -p release
+          cp target/debian/*.deb release/
+
+      - name: Package tarball
+        run: |
+          D="lumen-$VERSION-x86_64-linux"
+          mkdir -p "$D/packaging"
+          cp target/release/lumen README.md LICENSE "$D/"
+          cp -r packaging/icons packaging/*.desktop "$D/packaging/"
+          printf '#!/bin/sh\n# Install the prebuilt binary for this user.\nset -e\ncd "$(dirname "$0")"\nID=io.github.lumenlauncher.Lumen\ninstall -Dm755 lumen ~/.local/bin/lumen\ninstall -Dm644 packaging/$ID.desktop ~/.local/share/applications/$ID.desktop\nfor s in 16 24 32 48 64 128 256 512; do install -Dm644 packaging/icons/${s}x${s}.png ~/.local/share/icons/hicolor/${s}x${s}/apps/$ID.png; done\necho "Installed ~/.local/bin/lumen"\n' > "$D/install.sh"
+          chmod +x "$D/install.sh"
+          tar czf "release/$D.tar.gz" "$D"
 
       - name: Pack the GNOME Shell extension
-        run: npm run extension:pack
+        run: scripts/pack-extension.sh
 
       - name: Checksums
         working-directory: release
-        run: sha256sum *.AppImage *.deb *.shell-extension.zip | tee SHA256SUMS.txt
+        run: sha256sum *.deb *.tar.gz *.shell-extension.zip | tee SHA256SUMS.txt
 
       - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" release/*.AppImage release/*.deb release/*.shell-extension.zip release/SHA256SUMS.txt --clobber
+        run: gh release upload "$TAG" release/*.deb release/*.tar.gz release/*.shell-extension.zip release/SHA256SUMS.txt --clobber

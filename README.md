@@ -45,16 +45,24 @@ Press <kbd>Alt</kbd> + <kbd>Space</kbd> to find apps, files and folders, run ter
 
 ## Install
 
-Download the latest **AppImage** or **.deb** from [Releases](https://github.com/smith8h/lumen/releases/latest).
+Lumen is a native GTK 4 app written in Rust. It needs GTK 4.14 or newer (Ubuntu 24.04, Fedora 40, Debian 13 and later). Download the latest **.deb** or **tarball** from [Releases](https://github.com/smith8h/lumen/releases/latest).
 
-**AppImage** (any distro, no root needed):
+**Any distro** (no root needed):
 
 ```bash
-chmod +x Lumen-*.AppImage
-./Lumen-*.AppImage
+tar xzf lumen-*-x86_64-linux.tar.gz
+./lumen-*-x86_64-linux/install.sh    # → ~/.local/bin/lumen plus a menu entry
+lumen
 ```
 
-On first launch Lumen adds itself to your app menu and to *Startup Applications*, then offers to set up <kbd>Alt</kbd>+<kbd>Space</kbd>. Keep the AppImage somewhere permanent, like `~/Applications`, before you run it.
+**From source** (needs Rust and `libgtk-4-dev` / `gtk4-devel`):
+
+```bash
+scripts/install.sh                   # builds and installs to ~/.local
+scripts/install.sh --uninstall
+```
+
+On first launch Lumen adds itself to *Startup Applications* and offers to set up <kbd>Alt</kbd>+<kbd>Space</kbd>.
 
 **Debian / Ubuntu:**
 
@@ -69,11 +77,11 @@ Then open **Lumen** from your app menu.
 On **GNOME** (Ubuntu, Fedora, …) Lumen sets up <kbd>Alt</kbd>+<kbd>Space</kbd> for you with one click. It adds a custom shortcut, the same thing *Settings → Keyboard → Custom Shortcuts* does, and moves GNOME's own Alt+Space window menu out of the way. Undo it anytime in Settings, or from a terminal:
 
 ```bash
-lumen --setup-shortcut     # or: ./Lumen.AppImage --setup-shortcut
+lumen --setup-shortcut
 lumen --remove-shortcut    # restores GNOME's original Alt+Space
 ```
 
-On **other desktops** (KDE Plasma, Cinnamon, Xfce, Hyprland, Sway…), Lumen tries a regular global shortcut first. If your desktop doesn't allow that, bind <kbd>Alt</kbd>+<kbd>Space</kbd> to `lumen --toggle` in its keyboard settings. The welcome screen shows the exact command.
+On **other desktops** (KDE Plasma, Cinnamon, Xfce, Hyprland, Sway…), bind <kbd>Alt</kbd>+<kbd>Space</kbd> to `lumen --toggle` in the desktop's keyboard settings. The welcome screen shows the exact command.
 
 ### GNOME extension for real blur (optional)
 
@@ -92,7 +100,7 @@ GNOME doesn't let regular apps blur what's behind their windows, so on its own L
 
 It needs GNOME Shell 50. Lumen works the same without it.
 
-1. Download `lumen@lumenlauncher.github.io.shell-extension.zip` from [Releases](https://github.com/smith8h/lumen/releases/latest), or build it with `npm run extension:pack`.
+1. Download `lumen@lumenlauncher.github.io.shell-extension.zip` from [Releases](https://github.com/smith8h/lumen/releases/latest), or build it with `scripts/pack-extension.sh`.
 2. Install it:
    ```bash
    gnome-extensions install --force lumen@lumenlauncher.github.io.shell-extension.zip
@@ -158,78 +166,85 @@ systemctl --user enable --now ydotool   # starts the ydotoold service
 
 ```mermaid
 flowchart LR
-    K["Alt+Space<br/>(GNOME custom shortcut)"] -- "gdbus call … Toggle" --> D["D-Bus service"]
-    subgraph Main["Electron main process"]
-        D --> W["Panel window"]
-        S["Search orchestrator"] --> A["Apps<br/>.desktop + icon themes"]
-        S --> C["Calculator<br/>mathjs, sandboxed"]
-        S --> T["Terminal<br/>inline runs / terminal emulator"]
-        S --> Y["System & web"]
-        S --> F["File search"]
-        S --> CB["Clipboard history<br/>polling, clipboard.json"]
-        CB --> P["Paste<br/>ydotool / xdotool"]
+    K["Alt+Space<br/>(GNOME custom shortcut)"] -- "gdbus call … Toggle" --> D["D-Bus interface<br/>(same name as the GTK app)"]
+    subgraph App["lumen (GTK 4 UI thread)"]
+        D --> W["Panel window<br/>CSS-styled GTK widgets"]
+        W -- "query" --> Q["Search on a worker thread"]
+        CB["Clipboard watcher"] --> P["Paste<br/>ydotool / xdotool"]
     end
-    F <-- "messages" --> FW["Worker thread<br/>in-memory file index"]
-    W <-- "typed, validated IPC" --> R["Renderer<br/>React + glass UI"]
+    subgraph Core["lumen-core (no UI toolkit)"]
+        Q --> A["Apps<br/>read from GIO"]
+        Q --> C["Calculator<br/>own parser, units, currency"]
+        Q --> T["Terminal<br/>inline runs / terminal emulator"]
+        Q --> Y["System & web"]
+        Q --> F["File index<br/>background thread"]
+        Q --> H["Clipboard history<br/>clipboard.json"]
+    end
 ```
+
+The code is split in two crates. `lumen-core` holds everything that isn't UI: ranking, the fuzzy matcher, the calculator, clipboard history, the file index, settings and the GNOME shortcut setup. It has no GTK dependency and is covered by `cargo test`. `lumen` is the GTK 4 app around it.
 
 A few details worth knowing:
 
-- **Wayland first.** Wayland doesn't let apps place their own windows or grab global keys. Lumen opens a transparent window over the screen and draws the panel at Spotlight's position itself, so placement is the same on every compositor. A click on the transparent area, or focus moving elsewhere, closes it.
-- **The shortcut is instant.** GNOME runs `gdbus call` straight into the running process instead of starting a second Electron instance, which takes about 5 ms instead of about 300 ms.
-- **Real blur from the compositor.** The renderer watches the panel with a `ResizeObserver` and the main process broadcasts its rectangle as the D-Bus signal `PanelGeometry(x, y, w, h, radius)`. The GNOME extension finds Lumen's window by the PID that owns the bus name and puts an actor under it. That actor copies the pixels behind the panel, blurs them on the GPU (Clutter paint nodes: blit, downscale, gaussian) and draws them through a small GLSL shader that clips to the rounded rectangle and adds saturation. GNOME's stock `Shell.BlurEffect` can only blur a plain rectangle. The extension sets Lumen's `ShellBlur` D-Bus property so the panel can lower its own tint.
-- **Clipboard history from the main process.** The main process checks the clipboard every 0.7 s, but only while history is on and not paused. It keeps working after the panel's window is unloaded. On Wayland, Chromium only starts seeing other apps' copies after one of its windows has been shown, so at startup Lumen briefly shows a 1×1 transparent window that can't take focus. To paste, Lumen puts the text on the clipboard while it still has focus, hides the panel, waits about 240 ms for focus to return, then presses Ctrl+V. The renderer only ever sends clip ids; the text stays in the main process and never appears on a command line.
-- **Security.** The renderer is sandboxed with context isolation and no Node access. Every IPC call is checked against the panel's own `webContents`, settings are validated against a schema, mathjs runs with `import`/`evaluate`/`createUnit` disabled, and icons go through a custom protocol that serves only files Lumen resolved itself.
-- **Clean child processes.** Apps start fully detached through `gio launch` (so D-Bus activation and startup notification work). Lumen first removes the environment variables Electron and the AppImage runtime inject, so launched apps behave as if started from the desktop.
-- **Packaging.** A small launcher script handles the fast `--toggle` path. The .deb ships an AppArmor profile so Chromium's sandbox works on Ubuntu 24.04+, and the AppImage uses the static runtime, so it doesn't need `libfuse2`.
-- **Light on memory.** After a minute hidden, Lumen unloads its window and keeps only a small background process. Rebuilding the window takes about 50 ms, so the next Alt+Space still feels instant. Chromium's network service runs inside the main process, V8's young generation is kept small, mathjs loads on the first calculation, and the AppImage skips the zygote helpers it doesn't need without a sandbox. Turn unloading off in Settings if you'd rather keep everything warm.
+- **Wayland first.** Wayland doesn't let apps place their own windows or grab global keys. Lumen opens a transparent, maximized window and draws the panel at Spotlight's position itself, so placement is the same on every compositor. A click on the transparent area, or focus moving elsewhere, closes it.
+- **The shortcut is instant.** Lumen's D-Bus interface lives on the same bus name as its GTK application, and GNOME runs `gdbus call … Toggle` straight into the running process. A second `lumen --toggle` also works: GTK forwards it to the running instance and exits.
+- **Real blur from the compositor.** Lumen broadcasts the panel's rectangle as the D-Bus signal `PanelGeometry(x, y, w, h, radius)` on every size change, including animations. The GNOME extension finds Lumen's window by the PID that owns the bus name and puts an actor under it. That actor copies the pixels behind the panel, blurs them on the GPU (Clutter paint nodes: blit, downscale, gaussian) and draws them through a small GLSL shader that clips to the rounded rectangle and adds saturation. The extension sets Lumen's `ShellBlur` D-Bus property so the panel can lower its own tint.
+- **The look is CSS.** The "Lit glass" design tokens are computed in Rust for the current theme and accent (GTK 4.14 has no CSS variables or `color-mix()`) and filled into `crates/lumen/resources/style.css`. Icons are Lucide's line icons, drawn as GSK paths in the current text colour. Custom widgets handle the sliding selection light and the panel's animated height.
+- **Clipboard history.** Lumen watches the clipboard (its change signal plus a light 0.7 s check), only while history is on and not paused. GNOME only sends clipboard changes to apps that have shown a window, so after a `--hidden` start at login Lumen shows its panel for 0.3 s at 1% opacity. To paste, Lumen puts the text on the clipboard while it still has focus, hides the panel, waits about 240 ms for focus to return, then presses Ctrl+V. The text never appears on a command line and is never logged.
+- **Clean child processes.** Apps start through GIO with an activation token, so they get focus on Wayland and D-Bus activation and startup notification work. Commands and terminals start in their own session, and Lumen removes the variables that describe how *it* was started first.
+- **Light on memory.** Lumen idles at about 40 MB. While the panel is drawn, its own memory is around 45 MB on top of the shared GPU driver libraries. After a minute hidden it destroys the panel's widgets; rebuilding them takes about a millisecond. Turn that off in Settings if you'd rather keep everything warm.
 
 ## Development
 
-Requirements: Node.js 22+ and a Linux desktop.
+Requirements: Rust 1.92+, GTK 4.14+ development files (`sudo apt install libgtk-4-dev` on Ubuntu/Debian, `sudo dnf install gtk4-devel` on Fedora) and a Linux desktop.
 
 ```bash
-npm install
-npm run dev          # hot-reloading dev build
-npm run typecheck
-npm test             # unit tests (Node's built-in runner, no extra dependencies)
-npm run dist         # release/Lumen-x.y.z-x86_64.AppImage and release/lumen_x.y.z_amd64.deb
-npm run icons        # re-render build/icons from resources/icon.svg
+cargo run                      # debug build (press Alt+Space or run `cargo run -- --toggle` again)
+cargo test --workspace         # unit tests (core: calculator, fuzzy, clipboard history, files, settings…)
+cargo clippy --workspace --all-targets -- -D warnings
+cargo fmt --all
+cargo deb -p lumen             # target/debian/lumen_x.y.z_amd64.deb (cargo install cargo-deb)
+scripts/install.sh             # release build installed to ~/.local
+scripts/make-icons.sh          # re-render packaging/icons from resources/icon.svg (needs rsvg-convert)
 
-npm run extension:pack     # release/lumen@lumenlauncher.github.io.shell-extension.zip (extensions.gnome.org-ready)
-npm run extension:install  # pack + install for your user (log out and back in to load it)
-npm run extension:nested   # nested GNOME Shell with the extension, running Lumen inside it
+scripts/pack-extension.sh            # release/lumen@lumenlauncher.github.io.shell-extension.zip (extensions.gnome.org-ready)
+scripts/pack-extension.sh --install  # pack + install for your user (log out and back in to load it)
+scripts/extension-nested.sh          # nested GNOME Shell with the extension, running Lumen inside it
 ```
 
-**Working on the extension without logging out.** `npm run extension:nested` starts a nested GNOME Shell in a window (`gnome-shell --devkit`, which needs `mutter-dev-bin` on Ubuntu) with only the Lumen extension enabled, then runs the dev build of Lumen inside it. It uses its own D-Bus session, settings and Lumen profile, so your real session is untouched. Add `-- --headless` to run it without a window (for scripts and screenshots over D-Bus). GNOME Shell can't reload extension code, so restart it after changing `gnome-extension/`.
+**Working on the extension without logging out.** `scripts/extension-nested.sh` starts a nested GNOME Shell in a window (`gnome-shell --devkit`, which needs `mutter-dev-bin` on Ubuntu) with only the Lumen extension enabled, then runs the debug build of Lumen inside it. It uses its own D-Bus session, settings and Lumen profile, so your real session is untouched. Add `--headless` to run it without a window. Debug builds can be driven over D-Bus there: `Show(query)`, `Key("ctrl+K")` and `Capture("/tmp/panel.png")` for screenshots. GNOME Shell can't reload extension code, so restart it after changing `gnome-extension/`.
 
 Environment switches for testing:
 
 | Variable | Effect |
 | --- | --- |
-| `LUMEN_DEBUG=1` | Opens DevTools and keeps the panel open when it loses focus |
+| `LUMEN_DEBUG=1` | Keeps the panel open when it loses focus |
+| `LUMEN_DEBUG_CSS=1` | Prints stylesheet parsing errors |
+| `LUMEN_DEBUG_CLIPBOARD=1` | Traces clipboard reads (sizes only, never the text) |
 | `LUMEN_USER_DATA=/tmp/x` | Uses a separate settings/history folder |
-| `LUMEN_X11=1` | Runs under XWayland instead of native Wayland |
-| `LUMEN_UNLOAD_MS=5000` | Unloads the hidden panel after this many ms instead of a minute |
+| `LUMEN_UNLOAD_MS=5000` | Destroys the hidden panel after this many ms instead of a minute |
 
 Project layout:
 
 ```
-src/
-  main/            Electron main process
-    providers/     apps, calculator, terminal, web, system
-    files/         file index (worker thread) + previews
-    search.ts      ranking and sections
-    clipboard.ts   clipboard capture, storage and ";" results
-    cliphistory.ts clipboard history logic (dedupe, pins, ranking), unit-tested
-    paste.ts       paste into the previous app (ydotool / xdotool)
-    shortcut.ts    GNOME keybinding setup
-    window.ts      panel window
-  preload/         typed bridge exposed as window.lumen
-  renderer/        React UI and glass design tokens
-  shared/          types and constants shared by all three
-gnome-extension/   optional GNOME Shell extension: real blur, dock/Alt+Tab hiding, focus, clipboard helpers
-build/             icons, launcher script, AppArmor profile, packaging hooks
+crates/
+  lumen-core/        search, ranking and storage, no UI toolkit (unit-tested)
+    src/apps.rs        app ranking, results, Exec parsing
+    src/calculator.rs  expression parser, units (units.rs), currency (rates.rs)
+    src/files.rs       file index, path browsing, recent files, previews
+    src/cliphistory.rs clipboard history logic (dedupe, pins, ranking)
+    src/shortcut.rs    GNOME keybinding setup
+    src/lib.rs         Core: shared state and the search orchestrator
+  lumen/             the GTK 4 app
+    src/app.rs         controller: show/hide, actions, settings, theme
+    src/ui/            panel, results, preview, settings, welcome, output, custom widgets
+    src/desktop.rs     apps and launching through GIO
+    src/clipboard.rs   clipboard capture; paste.rs pastes into the previous app
+    src/dbus.rs        D-Bus interface for the shortcut and the GNOME extension
+    resources/style.css  the "Lit glass" stylesheet
+gnome-extension/     optional GNOME Shell extension: real blur, dock/Alt+Tab hiding, focus, clipboard helpers
+packaging/           .desktop file and icons
+scripts/             install, extension packing, nested GNOME Shell
 ```
 
 Settings live in `~/.config/Lumen/settings.json`. Usage history (for ranking) is in `history.json` next to it, and clipboard history is in `clipboard.json`.
@@ -240,7 +255,7 @@ Releases are built by GitHub Actions only when you **publish a GitHub release**,
 
 1. Push your changes to `main`.
 2. On GitHub, go to **Releases → Draft a new release**, create a tag like `v0.2.0`, and publish it.
-3. The [Release workflow](.github/workflows/release.yml) sets the app version from the tag, type-checks, builds, and attaches the `.AppImage`, the `.deb`, the GNOME extension zip and `SHA256SUMS.txt` to that release.
+3. The [Release workflow](.github/workflows/release.yml) sets the app version from the tag, runs the tests, builds on Ubuntu 24.04 (the oldest supported GTK), and attaches the `.deb`, a tarball, the GNOME extension zip and `SHA256SUMS.txt` to that release.
 
 To rebuild an existing release, run the workflow by hand from the **Actions** tab and enter the tag.
 
@@ -248,14 +263,14 @@ To rebuild an existing release, run the workflow by hand from the **Actions** ta
 
 - GNOME doesn't give apps real background blur, so without the [GNOME extension](#gnome-extension-for-real-blur-optional) the glass is a frosted tint. Other desktops get the tint only.
 - On Wayland without the extension, Lumen's window shows up in the dock and Alt+Tab while the panel is open.
-- Automatic shortcut setup covers GNOME. Other desktops may need the one-time manual binding above.
+- Automatic shortcut setup covers GNOME. Other desktops need the one-time manual binding above.
 - Pasting a clip automatically needs `ydotool` on Wayland ([setup](#clipboard-history)). Without it, you press Ctrl+V yourself. Clipboard history is text only for now.
 
 ## Roadmap
 
 - Emoji picker; images in clipboard history
 - Plugin API for custom providers
-- Flatpak and AUR packages
+- Flatpak, AppImage and AUR packages
 
 ## License
 

@@ -1,0 +1,51 @@
+[package]
+name = "lumen"
+description = "A fast, glassy, Spotlight-style launcher for Linux"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[[bin]]
+name = "lumen"
+path = "src/main.rs"
+
+[dependencies]
+lumen-core.workspace = true
+serde_json.workspace = true
+libc.workspace = true
+regex.workspace = true
+gtk = { package = "gtk4", version = "0.11", features = ["v4_14"] }
+async-channel = "2"
+gio-unix = "0.22"
+
+# `cargo deb -p lumen` → target/debian/lumen_<version>_amd64.deb
+[package.metadata.deb]
+name = "lumen"
+maintainer = "Hussein Shakir <husseinshakir81@gmail.com>"
+copyright = "2026, Hussein Shakir"
+section = "utils"
+priority = "optional"
+depends = "$auto"
+recommends = "libglib2.0-bin, xdg-utils"
+suggests = "ydotool"
+extended-description = """\
+Press Alt+Space to find apps, files and folders, run terminal commands, do math and \
+conversions, paste from your clipboard history, and open or search the web, all from one \
+glassy panel. Native GTK 4, Wayland first."""
+assets = [
+  ["target/release/lumen", "usr/bin/", "755"],
+  ["../../packaging/io.github.lumenlauncher.Lumen.desktop", "usr/share/applications/", "644"],
+  ["../../packaging/icons/16x16.png", "usr/share/icons/hicolor/16x16/apps/io.github.lumenlauncher.Lumen.png", "644"],
+  ["../../packaging/icons/24x24.png", "usr/share/icons/hicolor/24x24/apps/io.github.lumenlauncher.Lumen.png", "644"],
+  ["../../packaging/icons/32x32.png", "usr/share/icons/hicolor/32x32/apps/io.github.lumenlauncher.Lumen.png", "644"],
+  ["../../packaging/icons/48x48.png", "usr/share/icons/hicolor/48x48/apps/io.github.lumenlauncher.Lumen.png", "644"],
+  ["../../packaging/icons/64x64.png", "usr/share/icons/hicolor/64x64/apps/io.github.lumenlauncher.Lumen.png", "644"],
+  ["../../packaging/icons/128x128.png", "usr/share/icons/hicolor/128x128/apps/io.github.lumenlauncher.Lumen.png", "644"],
+  ["../../packaging/icons/256x256.png", "usr/share/icons/hicolor/256x256/apps/io.github.lumenlauncher.Lumen.png", "644"],
+  ["../../packaging/icons/512x512.png", "usr/share/icons/hicolor/512x512/apps/io.github.lumenlauncher.Lumen.png", "644"],
+  ["../../README.md", "usr/share/doc/lumen/README.md", "644"],
+]

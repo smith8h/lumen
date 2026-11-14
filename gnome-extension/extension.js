@@ -25,7 +25,7 @@ import {GlassActor} from './glass.js';
 const BUS_NAME = 'io.github.lumenlauncher.Lumen';
 const OBJECT_PATH = '/io/github/lumenlauncher/Lumen';
 const INTERFACE = 'io.github.lumenlauncher.Lumen';
-const WM_CLASSES = new Set(['lumen', 'Lumen']);
+const WM_CLASSES = new Set(['io.github.lumenlauncher.Lumen', 'lumen', 'Lumen']);
 
 export default class LumenExtension extends Extension {
     enable() {
