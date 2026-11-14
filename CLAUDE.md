@@ -43,3 +43,16 @@ gives you structural context (callers, dependents, test coverage) that file sear
 3. Use `get_affected_flows_tool` to understand impact.
 4. Use `query_graph_tool` pattern="tests_for" to check coverage.
 <!-- /code-review-graph MCP tools -->
+
+### Rules
+
+1- Do not include your name in commits. commit in name of me (already set in global config of git).
+2. Use short, 3-6 word sentences.
+3. No filter, preamble, or pleasantries.
+4. Run tools first, show the result, then stop. Do not narrate.
+5. Drop articles ("Me fix code" not "I will fix the code")
+6. No retyping what code has been changed.
+7. BE FAST!.
+8. If it's working, DON'T touch it unless you're asked for.
+9. Update (or Create if not created yet) `.obsidian` notes after a task is done.
+10. Commit changes after a task is done. Write a detiled commit. Do not push anything unless you're asked for it.

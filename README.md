@@ -5,7 +5,7 @@
 # Lumen
 
 **A fast, glassy, Spotlight-style launcher for Linux.**
-Press <kbd>Alt</kbd> + <kbd>Space</kbd> to find apps, files and folders, run terminal commands, do math and conversions, and open or search the web, all from one panel.
+Press <kbd>Alt</kbd> + <kbd>Space</kbd> to find apps, files and folders, run terminal commands, do math and conversions, paste from your clipboard history, and open or search the web, all from one panel.
 
 [![Release](https://github.com/smith8h/lumen/actions/workflows/release.yml/badge.svg)](https://github.com/smith8h/lumen/actions/workflows/release.yml)
 [![Latest release](https://img.shields.io/github/v/release/smith8h/lumen?color=7c6cff)](https://github.com/smith8h/lumen/releases/latest)
@@ -25,7 +25,7 @@ Press <kbd>Alt</kbd> + <kbd>Space</kbd> to find apps, files and folders, run ter
 - **Terminal.** `> htop` opens in your terminal; `> ls -la` runs right in the panel and streams the output. Ctrl+Enter sends any command to a real terminal.
 - **Calculator.** `2^10`, `sqrt(2) * pi`, `15% of 80`, unit conversion (`5 km to mi`, `30 c to f`, `5 GB to MB`) and currency (`100 usd to iqd`).
 - **Web.** URLs open directly in your default browser (Brave, Firefox, Chrome…). Anything else can be searched, with shortcuts like `yt`, `gh`, `wiki`, `maps`, `npm`, `so` and `tr`.
-- **Clipboard history.** `;` lists text you copied in any app, newest first; type to search it, Enter pastes into the app you were using, Ctrl+Enter just copies. Pin clips you reuse. History stays on this computer (a `0600` file, or memory only), skips password-manager secrets with the GNOME extension, and can be paused or turned off.
+- **Clipboard history.** Type `;` to see the text you copied in any app, search it, and press Enter to paste it straight into the app you were using. Pin the clips you reuse. [More below](#clipboard-history).
 - **System.** Lock, sleep, log out, restart, shut down, dark/light mode, Wi-Fi, Do Not Disturb, empty Trash. Destructive actions ask for a second Enter.
 - **Learns from you.** Frecency ranking puts what you open most at the top, and the start screen shows your favourite apps and recent files.
 - **Feels native.** Glass design with a light/dark theme, accent colours, smooth spring animations, a sliding selection, full keyboard control and an actions menu (Ctrl+K).
@@ -82,6 +82,7 @@ GNOME doesn't let regular apps blur what's behind their windows, so on its own L
 - **Real background blur** under the panel, clipped to its rounded corners and following its size as results change. Lumen notices the extension and makes its own tint more see-through.
 - **No dock or Alt+Tab entry** while the panel is open.
 - **Reliable focus**, so you can type the moment the panel appears.
+- **Smarter clipboard history**: it skips passwords that password managers mark as secret, and pastes with Ctrl+Shift+V when you came from a terminal.
 
 | Without the extension | With the extension |
 |:-:|:-:|
@@ -105,6 +106,31 @@ It needs GNOME Shell 50. Lumen works the same without it.
 
 To remove it: `gnome-extensions uninstall lumen@lumenlauncher.github.io`.
 
+## Clipboard history
+
+Lumen remembers text you copy in any app. Type `;` to see it, pinned clips first, then newest. Keep typing to search it.
+
+| Keys | What it does |
+| --- | --- |
+| <kbd>Enter</kbd> | Paste into the app you were using before Lumen opened |
+| <kbd>Ctrl</kbd>+<kbd>Enter</kbd> | Copy only, without pasting |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> | Pin or unpin. Pinned clips are never dropped |
+| <kbd>Ctrl</kbd>+<kbd>D</kbd> | Delete the clip |
+| <kbd>Ctrl</kbd>+<kbd>K</kbd> | All actions, including *Paste into terminal* (Ctrl+Shift+V) |
+
+To clear everything except pinned clips, search for **Clear Clipboard History**, or use *Settings → Clipboard*. There you can also pause recording, turn history off, keep it in memory only, and choose how many clips to keep (200 by default).
+
+**Privacy.** Clips never leave your computer. They're saved in `~/.config/Lumen/clipboard.json`, readable only by you, and never written to logs. Clips only show up after you type `;`, never in normal searches. Copies over 100 KB are skipped. With the [GNOME extension](#gnome-extension-for-real-blur-optional), copies that password managers such as KeePassXC or Bitwarden mark as secret are skipped too. History is text only for now.
+
+**Automatic paste.** To press Ctrl+V in another app for you, Lumen uses [`ydotool`](https://github.com/ReimuNotMoe/ydotool) on Wayland, or `xdotool` on X11. On Ubuntu:
+
+```bash
+sudo apt install ydotool
+systemctl --user enable --now ydotool   # starts the ydotoold service
+```
+
+`ydotoold` needs access to `/dev/uinput`. If the service doesn't start, see ydotool's README. Without ydotool, Enter still copies the clip and Lumen tells you to press Ctrl+V. With the GNOME extension, Lumen also knows when you came from a terminal and pastes with Ctrl+Shift+V there.
+
 ## Using Lumen
 
 | Keys | What it does |
@@ -114,7 +140,6 @@ To remove it: `gnome-extensions uninstall lumen@lumenlauncher.github.io`.
 | <kbd>Enter</kbd> | Open, run or copy the selected result |
 | <kbd>Ctrl</kbd>+<kbd>Enter</kbd> | Show a file in Files · run a command in the terminal |
 | <kbd>Ctrl</kbd>+<kbd>K</kbd> or <kbd>Tab</kbd> | More actions (copy path, open terminal here, app actions…) |
-| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> · <kbd>Ctrl</kbd>+<kbd>D</kbd> | Pin · delete the selected clip (in `;` mode) |
 | <kbd>Ctrl</kbd>+<kbd>,</kbd> | Settings |
 | <kbd>Esc</kbd> | Clear the search, then close |
 | Click outside | Close |
@@ -124,7 +149,7 @@ To remove it: `gnome-extensions uninstall lumen@lumenlauncher.github.io`.
 | `> command` | Run a shell command (inline output, or in your terminal) |
 | `= expression` | Force calculator mode |
 | `? query` | Search the web |
-| `; text` | Search clipboard history, Enter pastes |
+| `;` or `; text` | Clipboard history: browse or search, Enter pastes |
 | `~/` or `/` | Browse folders |
 | `yt` `gh` `wiki` `maps` `npm` `so` `tr` `img` `reddit` `mdn` + text | Search that site |
 | `github.com`, `localhost:3000`, `192.168.1.1` | Open in your browser |
@@ -141,6 +166,8 @@ flowchart LR
         S --> T["Terminal<br/>inline runs / terminal emulator"]
         S --> Y["System & web"]
         S --> F["File search"]
+        S --> CB["Clipboard history<br/>polling, clipboard.json"]
+        CB --> P["Paste<br/>ydotool / xdotool"]
     end
     F <-- "messages" --> FW["Worker thread<br/>in-memory file index"]
     W <-- "typed, validated IPC" --> R["Renderer<br/>React + glass UI"]
@@ -151,6 +178,7 @@ A few details worth knowing:
 - **Wayland first.** Wayland doesn't let apps place their own windows or grab global keys. Lumen opens a transparent window over the screen and draws the panel at Spotlight's position itself, so placement is the same on every compositor. A click on the transparent area, or focus moving elsewhere, closes it.
 - **The shortcut is instant.** GNOME runs `gdbus call` straight into the running process instead of starting a second Electron instance, which takes about 5 ms instead of about 300 ms.
 - **Real blur from the compositor.** The renderer watches the panel with a `ResizeObserver` and the main process broadcasts its rectangle as the D-Bus signal `PanelGeometry(x, y, w, h, radius)`. The GNOME extension finds Lumen's window by the PID that owns the bus name and puts an actor under it. That actor copies the pixels behind the panel, blurs them on the GPU (Clutter paint nodes: blit, downscale, gaussian) and draws them through a small GLSL shader that clips to the rounded rectangle and adds saturation. GNOME's stock `Shell.BlurEffect` can only blur a plain rectangle. The extension sets Lumen's `ShellBlur` D-Bus property so the panel can lower its own tint.
+- **Clipboard history from the main process.** The main process checks the clipboard every 0.7 s, but only while history is on and not paused. It keeps working after the panel's window is unloaded. On Wayland, Chromium only starts seeing other apps' copies after one of its windows has been shown, so at startup Lumen briefly shows a 1×1 transparent window that can't take focus. To paste, Lumen puts the text on the clipboard while it still has focus, hides the panel, waits about 240 ms for focus to return, then presses Ctrl+V. The renderer only ever sends clip ids; the text stays in the main process and never appears on a command line.
 - **Security.** The renderer is sandboxed with context isolation and no Node access. Every IPC call is checked against the panel's own `webContents`, settings are validated against a schema, mathjs runs with `import`/`evaluate`/`createUnit` disabled, and icons go through a custom protocol that serves only files Lumen resolved itself.
 - **Clean child processes.** Apps start fully detached through `gio launch` (so D-Bus activation and startup notification work). Lumen first removes the environment variables Electron and the AppImage runtime inject, so launched apps behave as if started from the desktop.
 - **Packaging.** A small launcher script handles the fast `--toggle` path. The .deb ships an AppArmor profile so Chromium's sandbox works on Ubuntu 24.04+, and the AppImage uses the static runtime, so it doesn't need `libfuse2`.
@@ -164,6 +192,7 @@ Requirements: Node.js 22+ and a Linux desktop.
 npm install
 npm run dev          # hot-reloading dev build
 npm run typecheck
+npm test             # unit tests (Node's built-in runner, no extra dependencies)
 npm run dist         # release/Lumen-x.y.z-x86_64.AppImage and release/lumen_x.y.z_amd64.deb
 npm run icons        # re-render build/icons from resources/icon.svg
 
@@ -181,6 +210,7 @@ Environment switches for testing:
 | `LUMEN_DEBUG=1` | Opens DevTools and keeps the panel open when it loses focus |
 | `LUMEN_USER_DATA=/tmp/x` | Uses a separate settings/history folder |
 | `LUMEN_X11=1` | Runs under XWayland instead of native Wayland |
+| `LUMEN_UNLOAD_MS=5000` | Unloads the hidden panel after this many ms instead of a minute |
 
 Project layout:
 
@@ -190,16 +220,19 @@ src/
     providers/     apps, calculator, terminal, web, system
     files/         file index (worker thread) + previews
     search.ts      ranking and sections
+    clipboard.ts   clipboard capture, storage and ";" results
+    cliphistory.ts clipboard history logic (dedupe, pins, ranking), unit-tested
+    paste.ts       paste into the previous app (ydotool / xdotool)
     shortcut.ts    GNOME keybinding setup
     window.ts      panel window
   preload/         typed bridge exposed as window.lumen
   renderer/        React UI and glass design tokens
   shared/          types and constants shared by all three
-gnome-extension/   optional GNOME Shell extension: real blur, dock/Alt+Tab hiding, focus
+gnome-extension/   optional GNOME Shell extension: real blur, dock/Alt+Tab hiding, focus, clipboard helpers
 build/             icons, launcher script, AppArmor profile, packaging hooks
 ```
 
-Settings live in `~/.config/Lumen/settings.json`; usage history (for ranking) lives in `history.json` next to it.
+Settings live in `~/.config/Lumen/settings.json`. Usage history (for ranking) is in `history.json` next to it, and clipboard history is in `clipboard.json`.
 
 ## Releasing
 
@@ -213,10 +246,10 @@ To rebuild an existing release, run the workflow by hand from the **Actions** ta
 
 ## Known limitations
 
-- GNOME doesn't give apps real background blur, so without the [GNOME extension](#gnome-extension-for-real-blur-optional) the glass is a frosted tint. Lower *Glass opacity* in Settings for a more see-through look. Other desktops get the tint only.
+- GNOME doesn't give apps real background blur, so without the [GNOME extension](#gnome-extension-for-real-blur-optional) the glass is a frosted tint. Other desktops get the tint only.
 - On Wayland without the extension, Lumen's window shows up in the dock and Alt+Tab while the panel is open.
 - Automatic shortcut setup covers GNOME. Other desktops may need the one-time manual binding above.
-- Pasting a clip presses Ctrl+V for you with [`ydotool`](https://github.com/ReimuNotMoe/ydotool) (needs its `ydotoold` service running) on Wayland, or `xdotool` on X11. Without them, Lumen copies the clip and asks you to press Ctrl+V. Clipboard history is text only for now.
+- Pasting a clip automatically needs `ydotool` on Wayland ([setup](#clipboard-history)). Without it, you press Ctrl+V yourself. Clipboard history is text only for now.
 
 ## Roadmap
 

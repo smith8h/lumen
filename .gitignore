@@ -9,3 +9,6 @@ dist/
 *.tsbuildinfo
 # Added by code-review-graph
 .code-review-graph/
+CLAUDE.md
+.mcp.json
+.claude/
