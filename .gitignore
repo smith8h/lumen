@@ -4,10 +4,6 @@ release/
 .DS_Store
 .vscode/
 .idea/
-# Left over from the Electron version
-node_modules/
-out/
-*.tsbuildinfo
 # Added by code-review-graph
 .code-review-graph/
 CLAUDE.md
