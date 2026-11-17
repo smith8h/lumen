@@ -1,6 +1,6 @@
 # Git ignore rules
 
-Updated 2026-11-17.
+Updated 2026-11-17. Back to [[Lumen]].
 
 ## Ignored
 - Rust build: `target/`, `release/`, `dist/`, `*.rs.bk`
