@@ -1,11 +1,39 @@
+# Rust build output
 target/
 release/
+dist/
+**/*.rs.bk
+*.pdb
+
+# Packaging artifacts
+*.deb
+*.rpm
+*.AppImage
+*.flatpak
+*.tar.gz
+*.zip
+*.shell-extension.zip
+gnome-extension/schemas/gschemas.compiled
+
+# Logs and temp files
 *.log
+*.tmp
+*.swp
+*.swo
+*~
 .DS_Store
+Thumbs.db
+
+# Editors / IDEs
 .vscode/
 .idea/
-# Added by code-review-graph
+*.iml
+
+# AI tooling and code-review-graph
 .code-review-graph/
-CLAUDE.md
-.mcp.json
 .claude/
+.codebuddy/
+.github/instructions/
+.windsurfrules
+.mcp.json
+CLAUDE.md
